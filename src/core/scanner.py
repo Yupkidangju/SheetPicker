@@ -77,41 +77,48 @@ class FileScanner:
 
             elif ext == '.xlsx':
                 # [KR] .xlsx 파일: openpyxl read_only 모드로 메모리 효율적 로딩
-                wb = load_workbook(file_path, read_only=True, data_only=True)
-                for sheet_name in wb.sheetnames:
-                    ws = wb[sheet_name]
-                    rows_iter = ws.iter_rows(values_only=True)
+                wb = None
+                try:
+                    wb = load_workbook(file_path, read_only=True, data_only=True)
+                    for sheet_name in wb.sheetnames:
+                        ws = wb[sheet_name]
+                        rows_iter = ws.iter_rows(values_only=True)
 
-                    # 헤더 읽기
-                    try:
-                        header = next(rows_iter)
-                    except StopIteration:
-                        continue # 빈 시트 스킵
+                        # 헤더 읽기
+                        try:
+                            header = next(rows_iter)
+                        except StopIteration:
+                            continue # 빈 시트 스킵
 
-                    buffer = []
-                    for row in rows_iter:
-                        buffer.append(row)
-                        if len(buffer) >= chunksize:
+                        buffer = []
+                        for row in rows_iter:
+                            buffer.append(row)
+                            if len(buffer) >= chunksize:
+                                df_chunk = pd.DataFrame(buffer, columns=header)
+                                yield {'sheet_name': sheet_name, 'data': df_chunk}
+                                buffer = []
+
+                        # 남은 데이터 처리
+                        if buffer:
                             df_chunk = pd.DataFrame(buffer, columns=header)
                             yield {'sheet_name': sheet_name, 'data': df_chunk}
-                            buffer = []
-
-                    # 남은 데이터 처리
-                    if buffer:
-                        df_chunk = pd.DataFrame(buffer, columns=header)
-                        yield {'sheet_name': sheet_name, 'data': df_chunk}
-                wb.close()
+                finally:
+                    # [KR] 제너레이터 중단 시에도 파일 리소스 해제 보장
+                    if wb:
+                        wb.close()
 
             elif ext == '.xls':
                 # [KR] .xls 파일: 레거시 포맷은 pandas 기본 로드 (전체 로드 후 청크 분할)
-                # xlrd 엔진 사용 (pandas가 자동 감지)
                 xls = pd.ExcelFile(file_path)
-                for sheet_name in xls.sheet_names:
-                    df = pd.read_excel(file_path, sheet_name=sheet_name)
-                    # DataFrame을 chunksize로 슬라이싱하여 yield
-                    num_rows = len(df)
-                    for i in range(0, num_rows, chunksize):
-                        yield {'sheet_name': sheet_name, 'data': df.iloc[i:i+chunksize]}
+                try:
+                    for sheet_name in xls.sheet_names:
+                        df = pd.read_excel(file_path, sheet_name=sheet_name)
+                        # DataFrame을 chunksize로 슬라이싱하여 yield
+                        num_rows = len(df)
+                        for i in range(0, num_rows, chunksize):
+                            yield {'sheet_name': sheet_name, 'data': df.iloc[i:i+chunksize]}
+                finally:
+                    xls.close()
 
         except Exception as e:
             # [KR] 읽기 실패 시

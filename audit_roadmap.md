@@ -20,15 +20,16 @@
 - [x] **[Test]** 예외 처리 (파일 잠김, 권한 없음) 검증
 
 ### Phase 3: 검색 엔진 구현 (Step 3)
-- [ ] **[Core]** `src/core/searcher.py` 구현
-- [ ] **[Logic]** 행(Row) vs 열(Column) 검색 알고리즘 구현
-- [ ] **[Logic]** 대소문자 구분 및 부분 일치 로직
-- [ ] **[Thread]** QThread/Worker 패턴 적용 (UI 프리징 방지)
+- [x] **[Core]** `src/core/searcher.py` 구현
+- [x] **[Logic]** 행(Row) vs 열(Column) 검색 알고리즘 구현
+- [x] **[Logic]** 대소문자 구분 및 부분 일치 로직
+- [x] **[Thread]** QThread/Worker 패턴 적용 (Phase 4에서 통합 완료)
 
 ### Phase 4: 결과 UI 및 상호작용 (Step 4)
-- [ ] **[UI]** `src/ui/widgets.py` - ResultTable 구현
-- [ ] **[UI]** 검색 결과 데이터 바인딩 및 체크박스 기능
-- [ ] **[UI]** 진행 상태 표시 (Status Bar / Progress)
+- [x] **[UI]** `src/ui/widgets.py` - Drag & Drop 이벤트 처리
+- [x] **[Thread]** `src/core/workers.py` - SearchWorker 구현
+- [x] **[UI]** Main Window - Worker 연결 및 결과 테이블 업데이트
+- [x] **[UI]** 진행 상태 표시 (Status Bar / Progress)
 
 ### Phase 5: 클립보드 및 배포 (Step 5)
 - [ ] **[Feat]** `src/utils/clipboard_manager.py` 구현
