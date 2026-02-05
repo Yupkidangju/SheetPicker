@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, Qt
 from src.ui.widgets import FileDropZone, SearchGroup, ResultTable, CopyAction
 from src.core.workers import SearchWorker
+from src.utils.clipboard_manager import ClipboardManager
 
 class MainWindow(QMainWindow):
     """
@@ -42,6 +43,7 @@ class MainWindow(QMainWindow):
         # [KR] 시그널 연결
         self.drop_zone.files_dropped.connect(self.on_files_dropped)
         self.search_group.search_requested.connect(self.start_search)
+        self.copy_action.copy_requested.connect(self.on_copy_requested)
 
         # [KR] Worker 참조 변수
         self.worker = None
@@ -107,6 +109,45 @@ class MainWindow(QMainWindow):
 
         if self.result_table.table_results.rowCount() == 0:
             QMessageBox.information(self, "Search Result", "No matches found.")
+
+    @Slot()
+    def on_copy_requested(self):
+        """
+        [KR] 선택된 항목을 클립보드로 복사합니다.
+        """
+        selected_rows = []
+        table = self.result_table.table_results
+
+        for row in range(table.rowCount()):
+            # 체크박스 확인 (0번 컬럼)
+            chk_item = table.item(row, 0)
+            if chk_item.checkState() == Qt.CheckState.Checked:
+                data = {
+                    'file': table.item(row, 1).text(),
+                    'sheet': table.item(row, 2).text(),
+                    'data': table.item(row, 3).text()
+                }
+                selected_rows.append(data)
+
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select items to copy.")
+            return
+
+        formatted_text = ClipboardManager.format_for_clipboard(selected_rows)
+
+        # [KR] 개인정보 경고 (Spec)
+        reply = QMessageBox.question(
+            self,
+            "Privacy Warning",
+            "Selected data may contain sensitive information.\nProceed to copy to system clipboard?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if ClipboardManager.copy_to_clipboard(formatted_text):
+                self.lbl_status.setText(f"Copied {len(selected_rows)} items to clipboard.")
+            else:
+                QMessageBox.critical(self, "Error", "Failed to access clipboard.")
 
     def closeEvent(self, event):
         # [KR] 앱 종료 시 스레드 안전 종료

@@ -23,7 +23,7 @@
 - [x] **[Core]** `src/core/searcher.py` 구현
 - [x] **[Logic]** 행(Row) vs 열(Column) 검색 알고리즘 구현
 - [x] **[Logic]** 대소문자 구분 및 부분 일치 로직
-- [x] **[Thread]** QThread/Worker 패턴 적용 (Phase 4에서 통합 완료)
+- [x] **[Thread]** QThread/Worker 패턴 적용
 
 ### Phase 4: 결과 UI 및 상호작용 (Step 4)
 - [x] **[UI]** `src/ui/widgets.py` - Drag & Drop 이벤트 처리
