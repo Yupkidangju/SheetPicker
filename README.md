@@ -8,6 +8,7 @@
 * **유연한 검색:** 행/열 단위 검색 및 대소문자 구분 옵션.
 * **안전한 처리:** 대용량 파일 처리 시 메모리 최적화 및 프리징 방지.
 * **편의성:** 검색 결과의 선택적 클립보드 복사.
+* **고급 기능:** 정규식 검색, 검색 기록, 상세 보기(더블 클릭), 내보내기(.xlsx/.csv), 파일 바로 열기(우클릭).
 
 ---
 
@@ -19,6 +20,7 @@
 * **Flexible Search:** Row/Column-based search with case sensitivity options.
 * **Safe Processing:** Memory optimization and anti-freezing for large file handling.
 * **Convenience:** Selective clipboard copying of search results.
+* **Advanced Features:** Regex search, Search history, Detail view (Double-click), Export to Excel/CSV, Open File/Location (Right-click).
 
 ---
 
@@ -30,6 +32,7 @@
 * **柔軟な検索:** 行/列単位の検索および大文字・小文字の区別オプション。
 * **安全な処理:** 大容量ファイル処理時のメモリ最適化およびフリーズ防止。
 * **利便性:** 検索結果の選択的クリップボードコピー。
+* **高度な機能:** 正規表現検索、検索履歴、詳細表示（ダブルクリック）、Excel/CSVエクスポート、ファイル/フォルダを開く（右クリック）。
 
 ---
 
@@ -41,6 +44,7 @@
 * **靈活搜尋:** 支援行/列單位搜尋及大小寫區分選項。
 * **安全處理:** 處理大容量檔案時的記憶體最佳化及防止凍結。
 * **便利性:** 搜尋結果的選擇性剪貼簿複製。
+* **進階功能:** 正規表示式搜尋、搜尋紀錄、詳細檢視（雙擊）、匯出 Excel/CSV、開啟檔案/資料夾（右鍵）。
 
 ---
 
@@ -52,3 +56,4 @@
 * **灵活搜索:** 支持行/列单位搜索及大小写区分选项。
 * **安全处理:** 处理大容量文件时的内存优化及防止冻结。
 * **便利性:** 搜索结果的选择性剪贴板复制。
+* **高级功能:** 正则表达式搜索、搜索记录、详细查看（双击）、导出 Excel/CSV、打开文件/文件夹（右键）。
