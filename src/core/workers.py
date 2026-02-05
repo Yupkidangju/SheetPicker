@@ -16,12 +16,13 @@ class SearchWorker(QThread):
     error_occurred = Signal(str)   # 에러 발생 시 방출
     finished_task = Signal()       # 작업 완료 시 방출 (finished는 QThread 기본 시그널과 겹치므로 이름 변경)
 
-    def __init__(self, files: List[str], keyword: str, by_column: bool, case_sensitive: bool):
+    def __init__(self, files: List[str], keyword: str, by_column: bool, case_sensitive: bool, use_regex: bool = False):
         super().__init__()
         self.files = files
         self.keyword = keyword
         self.by_column = by_column
         self.case_sensitive = case_sensitive
+        self.use_regex = use_regex
         self.scanner = FileScanner()
         self._is_running = True
 
@@ -52,7 +53,8 @@ class SearchWorker(QThread):
                         df,
                         self.keyword,
                         by_column=self.by_column,
-                        case_sensitive=self.case_sensitive
+                        case_sensitive=self.case_sensitive,
+                        use_regex=self.use_regex
                     )
 
                     # [KR] 결과가 있으면 UI로 전송
@@ -63,9 +65,10 @@ class SearchWorker(QThread):
 
                             result_data = {
                                 'file': file_name,
+                                'full_path': str(file_path),
                                 'sheet': sheet_name,
                                 'preview': preview,
-                                # 'raw_data': row # 필요 시 원본 데이터 포함
+                                'raw_data': row.to_dict()
                             }
                             self.result_found.emit(result_data)
 

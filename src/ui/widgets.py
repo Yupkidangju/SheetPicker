@@ -1,9 +1,11 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QListWidget,
     QTableWidget, QGroupBox, QHBoxLayout, QRadioButton,
-    QLineEdit, QCheckBox, QAbstractItemView, QTableWidgetItem
+    QLineEdit, QCheckBox, QAbstractItemView, QTableWidgetItem,
+    QComboBox, QDialog, QHeaderView, QMenu
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtGui import QDesktopServices, QAction
 from src.core.scanner import FileScanner
 
 class FileDropZone(QWidget):
@@ -74,7 +76,8 @@ class SearchGroup(QWidget):
     [KR] 검색 옵션 및 입력 위젯 그룹.
     행/열 선택, 대소문자 구분, 검색어 입력 기능을 제공합니다.
     """
-    search_requested = Signal(str, bool, bool) # keyword, by_column, case_sensitive
+    # keyword, by_column, case_sensitive, use_regex
+    search_requested = Signal(str, bool, bool, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -91,34 +94,95 @@ class SearchGroup(QWidget):
         self.radio_col.setChecked(True) # [KR] 기본값: 열 검색
         self.chk_case = QCheckBox("Case Sensitive")
         self.chk_case.setChecked(True) # [KR] 기본값: 대소문자 구분
+        self.chk_regex = QCheckBox("Regex") # [KR] 정규식 옵션 추가
 
         opt_layout.addWidget(self.radio_row)
         opt_layout.addWidget(self.radio_col)
         opt_layout.addWidget(self.chk_case)
+        opt_layout.addWidget(self.chk_regex)
 
-        # [KR] 검색어 입력 및 버튼
+        # [KR] 검색어 입력 (History ComboBox) 및 버튼
         input_layout = QHBoxLayout()
-        self.input_keyword = QLineEdit()
+        self.input_keyword = QComboBox()
+        self.input_keyword.setEditable(True)
         self.input_keyword.setPlaceholderText("Enter search keyword...")
-        self.input_keyword.returnPressed.connect(self.emit_search) # 엔터 키 지원
+        self.input_keyword.lineEdit().returnPressed.connect(self.emit_search) # 엔터 키 지원
 
         self.btn_search = QPushButton("[ SEARCH ]")
         self.btn_search.clicked.connect(self.emit_search)
 
-        input_layout.addWidget(self.input_keyword)
+        input_layout.addWidget(self.input_keyword, stretch=3)
         input_layout.addWidget(self.btn_search)
 
         layout.addWidget(self.grp_options)
         layout.addLayout(input_layout)
 
     def emit_search(self):
-        keyword = self.input_keyword.text().strip()
+        keyword = self.input_keyword.currentText().strip()
         if not keyword:
             return
 
+        # [KR] 히스토리 추가
+        self.add_to_history(keyword)
+
         by_column = self.radio_col.isChecked()
         case_sensitive = self.chk_case.isChecked()
-        self.search_requested.emit(keyword, by_column, case_sensitive)
+        use_regex = self.chk_regex.isChecked()
+        self.search_requested.emit(keyword, by_column, case_sensitive, use_regex)
+
+    def add_to_history(self, keyword):
+        """
+        [KR] 검색어를 히스토리에 추가합니다 (중복 제거, 최근 10개 유지)
+        """
+        # 현재 항목들 가져오기
+        items = [self.input_keyword.itemText(i) for i in range(self.input_keyword.count())]
+
+        # 이미 존재하면 제거 (맨 위로 올리기 위함)
+        if keyword in items:
+            self.input_keyword.removeItem(items.index(keyword))
+
+        # 맨 앞에 추가
+        self.input_keyword.insertItem(0, keyword)
+        self.input_keyword.setCurrentIndex(0)
+
+        # 10개 초과 시 마지막 제거
+        if self.input_keyword.count() > 10:
+            self.input_keyword.removeItem(10)
+
+class DetailDialog(QDialog):
+    """
+    [KR] 상세 보기 팝업 다이얼로그.
+    선택된 행의 모든 데이터를 Grid 형태로 보여줍니다.
+    """
+    def __init__(self, data: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Detail View")
+        self.resize(600, 400)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # 정보 표시
+        info_label = QLabel("Full Row Data:")
+        layout.addWidget(info_label)
+
+        # 테이블 구성
+        self.table = QTableWidget()
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(["Column", "Value"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        # 데이터 채우기
+        self.table.setRowCount(len(data))
+        for i, (key, value) in enumerate(data.items()):
+            self.table.setItem(i, 0, QTableWidgetItem(str(key)))
+            self.table.setItem(i, 1, QTableWidgetItem(str(value)))
+
+        layout.addWidget(self.table)
+
+        btn_close = QPushButton("Close")
+        btn_close.clicked.connect(self.close)
+        layout.addWidget(btn_close)
 
 class ResultTable(QWidget):
     """
@@ -139,10 +203,15 @@ class ResultTable(QWidget):
         self.table_results.setColumnWidth(2, 100)
         self.table_results.horizontalHeader().setStretchLastSection(True)
 
+        # [KR] 더블 클릭 및 컨텍스트 메뉴 설정
+        self.table_results.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table_results.customContextMenuRequested.connect(self.on_context_menu)
+        self.table_results.cellDoubleClicked.connect(self.on_double_click)
+
         layout.addWidget(self.lbl_title)
         layout.addWidget(self.table_results)
 
-    def add_result_row(self, file_name, sheet_name, preview_text):
+    def add_result_row(self, file_name, sheet_name, preview_text, full_path, raw_data):
         row_idx = self.table_results.rowCount()
         self.table_results.insertRow(row_idx)
 
@@ -150,6 +219,11 @@ class ResultTable(QWidget):
         chk_item = QTableWidgetItem()
         chk_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
         chk_item.setCheckState(Qt.CheckState.Unchecked)
+        # [KR] 메타데이터 저장 (UserRole)
+        chk_item.setData(Qt.ItemDataRole.UserRole, {
+            'full_path': full_path,
+            'raw_data': raw_data
+        })
         self.table_results.setItem(row_idx, 0, chk_item)
 
         self.table_results.setItem(row_idx, 1, QTableWidgetItem(file_name))
@@ -162,12 +236,60 @@ class ResultTable(QWidget):
         self.table_results.setRowCount(0)
         self.lbl_title.setText("Results Index: 0 found")
 
+    def on_double_click(self, row, col):
+        """
+        [KR] 더블 클릭 시 상세 보기 팝업
+        """
+        item = self.table_results.item(row, 0)
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if data and 'raw_data' in data:
+            dlg = DetailDialog(data['raw_data'], self)
+            dlg.exec()
+
+    def on_context_menu(self, pos):
+        """
+        [KR] 우클릭 컨텍스트 메뉴 (파일 열기, 폴더 열기)
+        """
+        item = self.table_results.itemAt(pos)
+        if not item:
+            return
+
+        row = item.row()
+        meta_item = self.table_results.item(row, 0)
+        data = meta_item.data(Qt.ItemDataRole.UserRole)
+
+        if not data or 'full_path' not in data:
+            return
+
+        full_path = data['full_path']
+
+        menu = QMenu(self)
+        action_open_file = QAction("Open File", self)
+        action_open_folder = QAction("Open File Location", self)
+
+        action_open_file.triggered.connect(lambda: self.open_file(full_path))
+        action_open_folder.triggered.connect(lambda: self.open_folder(full_path))
+
+        menu.addAction(action_open_file)
+        menu.addAction(action_open_folder)
+
+        menu.exec(self.table_results.mapToGlobal(pos))
+
+    def open_file(self, path):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def open_folder(self, path):
+        # [KR] 파일의 상위 폴더를 엽니다.
+        folder =  QUrl.fromLocalFile(path).adjusted(QUrl.UrlAdjustment.RemoveFilename)
+        QDesktopServices.openUrl(folder)
+
 class CopyAction(QWidget):
     """
     [KR] 하단 액션 바 위젯.
-    선택된 항목 개수를 표시하고 클립보드 복사 기능을 제공합니다.
+    선택된 항목 개수를 표시하고 클립보드 복사, 내보내기 기능을 제공합니다.
     """
     copy_requested = Signal()
+    export_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -175,10 +297,14 @@ class CopyAction(QWidget):
         self.setLayout(layout)
 
         self.lbl_selected = QLabel("[ Selected: 0 items ]")
+
+        self.btn_export = QPushButton("[ EXPORT RESULTS ]")
+        self.btn_export.clicked.connect(self.export_requested.emit)
+
         self.btn_copy = QPushButton("[ COPY TO CLIPBOARD ]")
         self.btn_copy.clicked.connect(self.copy_requested.emit)
-        # self.btn_copy.setEnabled(False) # [KR] Phase 5 구현 완료
 
         layout.addWidget(self.lbl_selected)
         layout.addStretch()
+        layout.addWidget(self.btn_export)
         layout.addWidget(self.btn_copy)

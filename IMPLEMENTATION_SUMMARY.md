@@ -8,7 +8,8 @@
 * **백엔드 로직:** Scanner(파일 로드) 및 Searcher(데이터 검색) 코어 로직 구현 완료 (Phase 2, 3 완료).
 * **UI 통합:** GUI와 백엔드 엔진 연결 및 스레딩 적용 완료 (Phase 4 완료).
 * **기능 완료:** 클립보드 복사 및 배포 준비 완료 (Phase 5 완료).
-* **전체 상태:** v0.1 BETA 구현 목표 달성 (Ready for Release).
+* **기능 확장:** v0.2 기능 (Regex, History, Export, Detail View) 구현 착수.
+* **전체 상태:** v0.1 BETA 완료 -> v0.2 기능 추가 개발 중.
 
 ## 주요 컴포넌트
 * **Main Window:** PySide6 기반의 GUI 진입점.

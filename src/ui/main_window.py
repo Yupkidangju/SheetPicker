@@ -1,8 +1,9 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFileDialog
 from PySide6.QtCore import Slot, Qt
 from src.ui.widgets import FileDropZone, SearchGroup, ResultTable, CopyAction
 from src.core.workers import SearchWorker
 from src.utils.clipboard_manager import ClipboardManager
+from src.utils.exporter import ResultExporter
 
 class MainWindow(QMainWindow):
     """
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         self.drop_zone.files_dropped.connect(self.on_files_dropped)
         self.search_group.search_requested.connect(self.start_search)
         self.copy_action.copy_requested.connect(self.on_copy_requested)
+        self.copy_action.export_requested.connect(self.on_export_requested)
 
         # [KR] Worker 참조 변수
         self.worker = None
@@ -52,8 +54,8 @@ class MainWindow(QMainWindow):
     def on_files_dropped(self, files):
         self.lbl_status.setText(f"Added {len(files)} files/folders to scan list.")
 
-    @Slot(str, bool, bool)
-    def start_search(self, keyword, by_column, case_sensitive):
+    @Slot(str, bool, bool, bool)
+    def start_search(self, keyword, by_column, case_sensitive, use_regex):
         """
         [KR] 검색 시작 처리.
         SearchWorker를 생성하고 시작합니다.
@@ -74,7 +76,7 @@ class MainWindow(QMainWindow):
         self.search_group.btn_search.setEnabled(False) # 중복 실행 방지
 
         # [KR] Worker 설정 및 시작
-        self.worker = SearchWorker(target_files, keyword, by_column, case_sensitive)
+        self.worker = SearchWorker(target_files, keyword, by_column, case_sensitive, use_regex)
         self.worker.result_found.connect(self.on_result_found)
         self.worker.progress_updated.connect(self.update_status)
         self.worker.error_occurred.connect(self.on_worker_error)
@@ -89,7 +91,9 @@ class MainWindow(QMainWindow):
         self.result_table.add_result_row(
             result['file'],
             result['sheet'],
-            result['preview']
+            result['preview'],
+            result['full_path'],
+            result['raw_data']
         )
 
     @Slot(str)
@@ -148,6 +152,64 @@ class MainWindow(QMainWindow):
                 self.lbl_status.setText(f"Copied {len(selected_rows)} items to clipboard.")
             else:
                 QMessageBox.critical(self, "Error", "Failed to access clipboard.")
+
+    @Slot()
+    def on_export_requested(self):
+        """
+        [KR] 검색 결과를 엑셀/CSV로 내보냅니다.
+        체크된 항목이 있으면 체크된 항목만, 없으면 전체 항목을 내보냅니다.
+        """
+        table = self.result_table.table_results
+        if table.rowCount() == 0:
+            QMessageBox.warning(self, "No Data", "There is no data to export.")
+            return
+
+        # 1. 대상 데이터 수집
+        target_data = []
+        has_checked = False
+
+        # 체크된 항목 먼저 확인
+        for row in range(table.rowCount()):
+            if table.item(row, 0).checkState() == Qt.CheckState.Checked:
+                has_checked = True
+                break
+
+        for row in range(table.rowCount()):
+            item = table.item(row, 0)
+            # 체크된 것이 있으면 체크된 것만, 없으면 전체
+            if has_checked and item.checkState() != Qt.CheckState.Checked:
+                continue
+
+            data_map = item.data(Qt.ItemDataRole.UserRole)
+            if data_map and 'raw_data' in data_map:
+                # 메타데이터 추가 (파일명, 시트명)
+                row_data = data_map['raw_data'].copy()
+                row_data['_File'] = table.item(row, 1).text()
+                row_data['_Sheet'] = table.item(row, 2).text()
+                target_data.append(row_data)
+
+        if not target_data:
+             QMessageBox.warning(self, "No Data", "Failed to collect data for export.")
+             return
+
+        # 2. 저장 경로 선택
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Results",
+            "search_results.xlsx",
+            "Excel Files (*.xlsx);;CSV Files (*.csv)"
+        )
+
+        if not file_path:
+            return
+
+        # 3. 내보내기 실행
+        try:
+            ResultExporter.export(target_data, file_path)
+            self.lbl_status.setText(f"Exported {len(target_data)} items to {file_path}")
+            QMessageBox.information(self, "Export Success", f"Successfully exported {len(target_data)} items.")
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", str(e))
 
     def closeEvent(self, event):
         # [KR] 앱 종료 시 스레드 안전 종료
