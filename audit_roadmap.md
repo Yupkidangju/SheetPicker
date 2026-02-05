@@ -14,10 +14,10 @@
 - [x] **[UI]** 기본 레이아웃 및 위젯(FileDropZone, SearchGroup) 배치 확인
 
 ### Phase 2: 스캐너 엔진 구현 (Step 2)
-- [ ] **[Core]** `src/core/scanner.py` 구현 (파일 순회)
-- [ ] **[Core]** Excel/CSV 파일 로딩 로직 (Pandas/Openpyxl)
-- [ ] **[Test]** 대용량 파일 로딩 시 메모리 사용량 체크
-- [ ] **[Test]** 예외 처리 (파일 잠김, 권한 없음) 검증
+- [x] **[Core]** `src/core/scanner.py` 구현 (파일 순회)
+- [x] **[Core]** Excel/CSV 파일 로딩 로직 (Pandas/Openpyxl)
+- [x] **[Test]** 대용량 파일 로딩 시 메모리 사용량 체크
+- [x] **[Test]** 예외 처리 (파일 잠김, 권한 없음) 검증
 
 ### Phase 3: 검색 엔진 구현 (Step 3)
 - [ ] **[Core]** `src/core/searcher.py` 구현
