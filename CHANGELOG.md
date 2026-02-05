@@ -27,3 +27,12 @@
 - Python 3.12 + PySide6 기반 모던 아키텍처.
 - Worker Thread 기반의 Non-freezing GUI.
 - `ConfigManager`를 통한 사용자 설정 지속성 보장.
+
+## [v1.0.1] - 2024-05-21 (Hotfix & i18n)
+### 수정됨 (Fixed)
+- **크리티컬 버그 수정:** 검색 결과 표시 중 `AttributeError: QCommonStyle` 발생 문제 해결 (PySide6 호환성).
+- **기능 복구:** 위 오류로 인해 클립보드 복사 및 내보내기가 작동하지 않던 문제 해결.
+
+### 추가됨 (Added)
+- **다국어 지원 (i18n):** 한국어, English, 日本語, 繁體中文, 简体中文 지원. (View -> Language 메뉴)
+- **편의성:** 결과 테이블 '모두 선택' (Select All) 버튼 추가.
