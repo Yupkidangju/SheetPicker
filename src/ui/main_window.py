@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
         self.config = ConfigManager.load_config()
 
         # [KR] 윈도우 기본 설정
-        self.setWindowTitle("Data Scavenger v0.3 Pro")
+        self.setWindowTitle("Data Scavenger v1.0.0")
         self.resize(1000, 800)
 
         # [KR] 테마 적용
