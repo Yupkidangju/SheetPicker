@@ -50,10 +50,18 @@
 - [x] **[Doc]** `designs.md` 및 `README.md` 기능 설명 업데이트
 
 ### Phase 7: 고도화 및 UX 오버홀 (v0.3) (Step 7)
-- [ ] **[Core]** 컬럼 타겟팅(Column Targeting) 로직 구현 (`searcher.py`)
-- [ ] **[UI]** 키워드 하이라이팅 (HTML Delegate) 구현
-- [ ] **[UI]** 결과 내 실시간 필터링 (ProxyModel) 구현
-- [ ] **[Feat]** 설정 관리자 (`ConfigManager`) 및 즐겨찾기(Favorites) 기능
-- [ ] **[UX]** 다크 모드/테마 (QSS) 및 아이콘 UI 적용
-- [ ] **[UX]** Non-blocking Toast Message 알림 구현
-- [ ] **[Doc]** 디자인 문서 및 사용자 가이드 최신화
+- [x] **[Core]** 컬럼 타겟팅(Column Targeting) 로직 구현 (`searcher.py`)
+- [x] **[UI]** 키워드 하이라이팅 (HTML Delegate) 구현
+- [x] **[UI]** 결과 내 실시간 필터링 (ProxyModel) 구현
+- [x] **[Feat]** 설정 관리자 (`ConfigManager`) 및 즐겨찾기(Favorites) 기능
+- [x] **[UX]** 다크 모드/테마 (QSS) 및 아이콘 UI 적용
+- [x] **[UX]** Non-blocking Toast Message 알림 구현
+- [x] **[Doc]** 디자인 문서 및 사용자 가이드 최신화
+
+### Phase 8: 안정화 및 배포 후보 (v1.0 RC) (Step 8)
+- [ ] **[Log]** 구조화된 로깅 시스템 도입 (`logging` 모듈 전환)
+- [ ] **[Test]** 주요 로직에 대한 단위 테스트 (Unit Tests) 커버리지 80% 달성
+- [ ] **[Test]** 통합 테스트 (Integration Tests) 및 시나리오 검증
+- [ ] **[CI/CD]** GitHub Actions를 통한 자동 빌드 및 테스트 워크플로우 구성
+- [ ] **[Build]** Nuitka 최적화 옵션을 적용한 최종 실행 파일 빌드
+- [ ] **[Doc]** 최종 사용자 매뉴얼 및 배포 가이드 작성
