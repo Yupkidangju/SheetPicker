@@ -42,9 +42,18 @@
 - [x] **[Code]** 방어적 코딩 (Defensive Coding) 적용 여부 검토
 
 ### Phase 6: 기능 확장 및 편의성 개선 (v0.2) (Step 6)
-- [ ] **[Core]** 정규표현식(Regex) 검색 지원 추가
-- [ ] **[UI]** 검색어 입력창을 `QComboBox`로 교체하여 히스토리 기능 구현
-- [ ] **[UI]** 결과 테이블 우클릭 메뉴 구현 (파일 열기, 폴더 열기)
-- [ ] **[UI]** 결과 항목 더블 클릭 시 상세 보기(Detail View) 팝업 구현
-- [ ] **[Feat]** 검색 결과 파일 내보내기 (Export to Excel/CSV) 구현
-- [ ] **[Doc]** `designs.md` 및 `README.md` 기능 설명 업데이트
+- [x] **[Core]** 정규표현식(Regex) 검색 지원 추가
+- [x] **[UI]** 검색어 입력창을 `QComboBox`로 교체하여 히스토리 기능 구현
+- [x] **[UI]** 결과 테이블 우클릭 메뉴 구현 (파일 열기, 폴더 열기)
+- [x] **[UI]** 결과 항목 더블 클릭 시 상세 보기(Detail View) 팝업 구현
+- [x] **[Feat]** 검색 결과 파일 내보내기 (Export to Excel/CSV) 구현
+- [x] **[Doc]** `designs.md` 및 `README.md` 기능 설명 업데이트
+
+### Phase 7: 고도화 및 UX 오버홀 (v0.3) (Step 7)
+- [ ] **[Core]** 컬럼 타겟팅(Column Targeting) 로직 구현 (`searcher.py`)
+- [ ] **[UI]** 키워드 하이라이팅 (HTML Delegate) 구현
+- [ ] **[UI]** 결과 내 실시간 필터링 (ProxyModel) 구현
+- [ ] **[Feat]** 설정 관리자 (`ConfigManager`) 및 즐겨찾기(Favorites) 기능
+- [ ] **[UX]** 다크 모드/테마 (QSS) 및 아이콘 UI 적용
+- [ ] **[UX]** Non-blocking Toast Message 알림 구현
+- [ ] **[Doc]** 디자인 문서 및 사용자 가이드 최신화

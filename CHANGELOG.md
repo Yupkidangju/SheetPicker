@@ -10,7 +10,16 @@
 - **UI:** PySide6 기반 메인 윈도우, Drag & Drop, 결과 테이블 구현.
 - **기능:** 검색 결과 클립보드 복사 (Privacy Warning 포함).
 
-## [v0.2 BETA] (Upcoming)
+## [v0.3 Pro] (Upcoming)
+### 추가됨 (Added)
+- **기능:** 컬럼 타겟팅 (특정 헤더만 검색).
+- **기능:** 결과 내 즉시 필터링 (Result Filter).
+- **기능:** 자주 쓰는 경로 즐겨찾기 (Favorites Panel).
+- **UX:** 다크 모드 / 라이트 모드 테마 지원 (View 메뉴).
+- **UX:** 키워드 하이라이팅 (HTML 렌더링).
+- **UX:** 비동기 알림 (Toast Message).
+
+## [v0.2 BETA]
 ### 추가됨 (Added)
 - **기능:** 정규표현식(Regex) 검색 지원.
 - **UI:** 검색 기록 (History) 저장 및 불러오기 (`QComboBox`).

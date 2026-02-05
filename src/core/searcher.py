@@ -13,7 +13,8 @@ class DataSearcher:
         keyword: str,
         by_column: bool = False,
         case_sensitive: bool = False,
-        use_regex: bool = False
+        use_regex: bool = False,
+        target_columns: Optional[List[str]] = None
     ) -> pd.DataFrame:
         """
         [KR] DataFrame 내에서 키워드를 검색하고, 매칭되는 행(Row)들을 반환합니다.
@@ -24,6 +25,7 @@ class DataSearcher:
             by_column (bool): True일 경우 데이터를 전치(Transpose)하여 '열'을 '행'처럼 검색합니다.
             case_sensitive (bool): 대소문자 구분 여부
             use_regex (bool): True일 경우 keyword를 정규식으로 처리합니다.
+            target_columns (List[str]): 검색할 컬럼명 리스트. None이면 전체 컬럼 검색.
 
         Returns:
             pd.DataFrame: 검색 조건에 매칭된 행만 포함하는 데이터프레임
@@ -43,18 +45,26 @@ class DataSearcher:
         # 1. 효율성을 위해 전체를 String으로 변환
         str_df = target_df.astype(str)
 
+        # [KR] 컬럼 타겟팅 적용
+        search_scope_df = str_df
+        if target_columns:
+             # 존재하는 컬럼만 필터링
+             valid_cols = [c for c in target_columns if c in str_df.columns]
+             if valid_cols:
+                 search_scope_df = str_df[valid_cols]
+
         # 2. 행(Axis 1) 단위로 하나라도 키워드를 포함하는지 검사
         # case_sensitive 옵션 적용
         # regex=use_regex 옵션 적용. use_regex가 False이면 regex=False가 되어 literal 매칭.
         try:
-            mask = str_df.apply(
+            mask = search_scope_df.apply(
                 lambda x: x.str.contains(keyword, case=case_sensitive, regex=use_regex, na=False)
             ).any(axis=1)
         except Exception:
             # [KR] 정규식 오류 등이 발생하면 빈 결과를 반환하여 크래시 방지
             return pd.DataFrame()
 
-        # [KR] 필터링된 결과 반환
+        # [KR] 필터링된 결과 반환 (원본 DataFrame에서 행 선택)
         return target_df[mask]
 
     @staticmethod

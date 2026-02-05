@@ -1,9 +1,13 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFileDialog
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFileDialog, QMenu
 from PySide6.QtCore import Slot, Qt
-from src.ui.widgets import FileDropZone, SearchGroup, ResultTable, CopyAction
+from PySide6.QtGui import QAction, QIcon
+from src.ui.widgets import FileDropZone, SearchGroup, ResultTable, CopyAction, FavoritesPanel
 from src.core.workers import SearchWorker
 from src.utils.clipboard_manager import ClipboardManager
 from src.utils.exporter import ResultExporter
+from src.utils.config import ConfigManager
+from src.ui.styles import AppStyle
+from src.ui.toast import ToastMessage
 
 class MainWindow(QMainWindow):
     """
@@ -14,9 +18,16 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # [KR] 초기 설정 로드
+        self.config = ConfigManager.load_config()
+
         # [KR] 윈도우 기본 설정
-        self.setWindowTitle("Data Scavenger v0.1 BETA")
-        self.resize(900, 700)
+        self.setWindowTitle("Data Scavenger v0.3 Pro")
+        self.resize(1000, 800)
+
+        # [KR] 테마 적용
+        is_dark = self.config.get("theme") == "dark"
+        AppStyle.apply_theme(self, is_dark)
 
         # [KR] 중앙 위젯 및 메인 레이아웃 설정
         central_widget = QWidget()
@@ -24,18 +35,29 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
 
+        # [KR] 메뉴바 설정 (테마 전환)
+        menubar = self.menuBar()
+        view_menu = menubar.addMenu("View")
+
+        action_toggle_theme = QAction("Toggle Dark/Light Mode", self)
+        action_toggle_theme.triggered.connect(self.toggle_theme)
+        view_menu.addAction(action_toggle_theme)
+
         # [KR] 상단 상태 바
         self.lbl_status = QLabel("[!] System Status: Ready to Scan")
-        self.lbl_status.setStyleSheet("background-color: #f0f0f0; padding: 5px; border-radius: 4px;")
+        self.lbl_status.setStyleSheet("padding: 5px; border-radius: 4px; font-weight: bold;")
 
         # [KR] 주요 위젯 인스턴스화
+        self.favorites_panel = FavoritesPanel()
         self.drop_zone = FileDropZone()
         self.search_group = SearchGroup()
         self.result_table = ResultTable()
         self.copy_action = CopyAction()
+        self.toast = ToastMessage(self)
 
         # [KR] 위젯 배치
         main_layout.addWidget(self.lbl_status)
+        main_layout.addWidget(self.favorites_panel)
         main_layout.addWidget(self.drop_zone, stretch=2)
         main_layout.addWidget(self.search_group)
         main_layout.addWidget(self.result_table, stretch=3)
@@ -46,16 +68,40 @@ class MainWindow(QMainWindow):
         self.search_group.search_requested.connect(self.start_search)
         self.copy_action.copy_requested.connect(self.on_copy_requested)
         self.copy_action.export_requested.connect(self.on_export_requested)
+        self.favorites_panel.add_favorite_requested.connect(self.on_favorite_added)
+
+        # [KR] 초기화 (설정값 적용)
+        self.favorites_panel.set_favorites(self.config.get("favorites", []))
+        hist = self.config.get("search_history", [])
+        if hist:
+            self.search_group.input_keyword.addItems(hist)
 
         # [KR] Worker 참조 변수
         self.worker = None
 
-    @Slot(list)
-    def on_files_dropped(self, files):
-        self.lbl_status.setText(f"Added {len(files)} files/folders to scan list.")
+    def toggle_theme(self):
+        current_theme = self.config.get("theme", "light")
+        new_theme = "dark" if current_theme == "light" else "light"
 
-    @Slot(str, bool, bool, bool)
-    def start_search(self, keyword, by_column, case_sensitive, use_regex):
+        ConfigManager.set("theme", new_theme)
+        self.config["theme"] = new_theme
+
+        AppStyle.apply_theme(self, new_theme == "dark")
+        self.show_toast(f"Switched to {new_theme.capitalize()} Mode")
+
+    def show_toast(self, message):
+        self.toast.show_message(message)
+
+    @Slot(str)
+    def on_favorite_added(self, path):
+        """
+        [KR] 즐겨찾기 패널에서 추가 요청 시
+        """
+        self.drop_zone.list_files.addItem(path)
+        self.show_toast(f"Added favorite path: {path}")
+
+    @Slot(str, bool, bool, bool, list)
+    def start_search(self, keyword, by_column, case_sensitive, use_regex, target_columns):
         """
         [KR] 검색 시작 처리.
         SearchWorker를 생성하고 시작합니다.
@@ -63,8 +109,12 @@ class MainWindow(QMainWindow):
         target_files = self.drop_zone.get_all_files()
 
         if not target_files:
-            QMessageBox.warning(self, "No Files", "Please drop files to search first.")
+            self.show_toast("Please drop files to search first.")
             return
+
+        # [KR] 히스토리 저장
+        history = [self.search_group.input_keyword.itemText(i) for i in range(self.search_group.input_keyword.count())]
+        ConfigManager.set("search_history", history)
 
         # [KR] 기존 작업 중단 및 UI 초기화
         if self.worker and self.worker.isRunning():
@@ -72,16 +122,23 @@ class MainWindow(QMainWindow):
             self.worker.wait()
 
         self.result_table.clear_results()
+        self.result_table.set_keyword(keyword) # 하이라이팅 설정
         self.lbl_status.setText(f"Searching for '{keyword}'...")
-        self.search_group.btn_search.setEnabled(False) # 중복 실행 방지
+        self.search_group.btn_search.setEnabled(False)
 
         # [KR] Worker 설정 및 시작
         self.worker = SearchWorker(target_files, keyword, by_column, case_sensitive, use_regex)
+        self.worker.target_columns = target_columns # 속성 주입
+
         self.worker.result_found.connect(self.on_result_found)
         self.worker.progress_updated.connect(self.update_status)
         self.worker.error_occurred.connect(self.on_worker_error)
         self.worker.finished_task.connect(self.on_search_finished)
         self.worker.start()
+
+    @Slot(list)
+    def on_files_dropped(self, files):
+        self.lbl_status.setText(f"Added {len(files)} files/folders to scan list.")
 
     @Slot(dict)
     def on_result_found(self, result):
