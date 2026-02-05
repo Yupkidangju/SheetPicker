@@ -22,6 +22,14 @@
 * **Convenience:** Selective clipboard copying of search results.
 * **Advanced Features:** Regex search, Search history, Detail view (Double-click), Export to Excel/CSV, Open File/Location (Right-click).
 
+### 🛠 User Manual (v1.0)
+1.  **Search:** Drag files/folders to the "Drop Zone". Enter a keyword.
+2.  **Targeting:** (Optional) Enter column names (e.g., `Name`, `ID`) to search only specific headers.
+3.  **Regex:** Check `Regex` box to use patterns like `\d{3}` (3 digits).
+4.  **Favorites:** Select a folder from the Favorites panel and click "Add" to scan it quickly.
+5.  **View:** Double-click a row to see full data. Right-click to open the file.
+6.  **Export:** Click `[ EXPORT RESULTS ]` to save the filtered list as .xlsx or .csv.
+
 ---
 
 ## 🇯🇵 日本語 (Japanese)
