@@ -32,11 +32,11 @@
 - [x] **[UI]** 진행 상태 표시 (Status Bar / Progress)
 
 ### Phase 5: 클립보드 및 배포 (Step 5)
-- [ ] **[Feat]** `src/utils/clipboard_manager.py` 구현
-- [ ] **[Feat]** 선택 항목 클립보드 복사 기능
-- [ ] **[Build]** Nuitka 빌드 테스트 및 실행 파일 생성
+- [x] **[Feat]** `src/utils/clipboard_manager.py` 구현
+- [x] **[Feat]** 선택 항목 클립보드 복사 기능
+- [x] **[Build]** Nuitka 빌드 테스트 및 실행 파일 생성
 
 ## 보안 및 규정 준수 감사
-- [ ] **[License]** PySide6 (LGPL) 라이선스 고지 확인
-- [ ] **[Privacy]** 클립보드 복사 시 민감 정보 경고 문구 확인
-- [ ] **[Code]** 방어적 코딩 (Defensive Coding) 적용 여부 검토
+- [x] **[License]** PySide6 (LGPL) 라이선스 고지 확인
+- [x] **[Privacy]** 클립보드 복사 시 민감 정보 경고 문구 확인
+- [x] **[Code]** 방어적 코딩 (Defensive Coding) 적용 여부 검토
