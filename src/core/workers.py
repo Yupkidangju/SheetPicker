@@ -3,6 +3,7 @@ from typing import List
 from pathlib import Path
 from src.core.scanner import FileScanner
 from src.core.searcher import DataSearcher
+from src.utils.logger import logger
 
 class SearchWorker(QThread):
     """
@@ -31,14 +32,17 @@ class SearchWorker(QThread):
         """
         [KR] 스레드 실행 진입점.
         """
+        logger.info(f"Worker started. Keyword: '{self.keyword}', Files: {len(self.files)}")
         self.progress_updated.emit(f"Starting search for '{self.keyword}'...")
 
         for file_path in self.files:
             if not self._is_running:
+                logger.info("Search aborted by user.")
                 break
 
             file_name = Path(file_path).name
             self.progress_updated.emit(f"Scanning: {file_name}")
+            logger.debug(f"Scanning file: {file_path}")
 
             try:
                 # [KR] Chunk 단위로 파일 읽기
@@ -76,10 +80,12 @@ class SearchWorker(QThread):
 
             except Exception as e:
                 # [KR] 개별 파일 에러는 전체 프로세스를 중단하지 않고 로그만 남김
+                logger.error(f"Error processing {file_name}: {e}", exc_info=True)
                 self.error_occurred.emit(f"Error reading {file_name}: {str(e)}")
 
         self.progress_updated.emit("Search completed.")
         self.finished_task.emit()
+        logger.info("Worker finished task.")
 
     def stop(self):
         """

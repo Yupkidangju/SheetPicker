@@ -21,7 +21,21 @@ def run_build(dry_run=False):
         "--standalone",
         "--onefile",
         "--enable-plugin=pyside6",
+        "--include-package=pandas", # Pandas 명시적 포함
+        "--include-package=openpyxl",
         "--windows-console-mode=disable", # GUI 앱이므로 콘솔 숨김
+
+        # [KR] 메타데이터 및 회사 정보
+        "--company-name=JulesCorp",
+        "--product-name=Data Scavenger",
+        "--file-version=1.0.0",
+        "--product-version=1.0.0",
+        "--file-description=High-performance Excel/CSV Search Tool",
+        "--copyright=Copyright (c) 2024 JulesCorp",
+
+        # [KR] 최적화 옵션 (LTO) - 빌드 시간 증가하므로 릴리즈 시 사용 권장
+        # "--lto=yes",
+
         str(main_script)
     ]
 
