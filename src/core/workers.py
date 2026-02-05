@@ -23,6 +23,7 @@ class SearchWorker(QThread):
         self.by_column = by_column
         self.case_sensitive = case_sensitive
         self.use_regex = use_regex
+        self.target_columns = None # [KR] 컬럼 타겟팅을 위한 속성 (외부 주입)
         self.scanner = FileScanner()
         self._is_running = True
 
@@ -54,7 +55,8 @@ class SearchWorker(QThread):
                         self.keyword,
                         by_column=self.by_column,
                         case_sensitive=self.case_sensitive,
-                        use_regex=self.use_regex
+                        use_regex=self.use_regex,
+                        target_columns=self.target_columns
                     )
 
                     # [KR] 결과가 있으면 UI로 전송

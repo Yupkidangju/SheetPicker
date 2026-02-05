@@ -2,11 +2,47 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QListWidget,
     QTableWidget, QGroupBox, QHBoxLayout, QRadioButton,
     QLineEdit, QCheckBox, QAbstractItemView, QTableWidgetItem,
-    QComboBox, QDialog, QHeaderView, QMenu
+    QComboBox, QDialog, QHeaderView, QMenu, QToolButton,
+    QFormLayout, QStyledItemDelegate
 )
-from PySide6.QtCore import Qt, Signal, QUrl
-from PySide6.QtGui import QDesktopServices, QAction
+from PySide6.QtCore import Qt, Signal, QUrl, QSortFilterProxyModel, QRegularExpression
+from PySide6.QtGui import QDesktopServices, QAction, QTextDocument, QAbstractTextDocumentLayout, QPalette
 from src.core.scanner import FileScanner
+
+class FavoritesPanel(QWidget):
+    """
+    [KR] 즐겨찾기 폴더 관리 패널.
+    자주 사용하는 경로를 저장하고 원클릭으로 추가합니다.
+    """
+    add_favorite_requested = Signal(str) # 경로 추가 요청 시그널
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.combo_favorites = QComboBox()
+        self.combo_favorites.setPlaceholderText("Select Favorite Folder...")
+        self.combo_favorites.setMinimumWidth(200)
+
+        self.btn_add_to_list = QPushButton("Add to Scan List")
+        self.btn_add_to_list.setToolTip("Add selected favorite to scan list")
+        self.btn_add_to_list.clicked.connect(self.on_add_clicked)
+
+        layout.addWidget(QLabel("Favorites:"))
+        layout.addWidget(self.combo_favorites)
+        layout.addWidget(self.btn_add_to_list)
+        layout.addStretch()
+
+    def set_favorites(self, favorites: list):
+        self.combo_favorites.clear()
+        self.combo_favorites.addItems(favorites)
+
+    def on_add_clicked(self):
+        path = self.combo_favorites.currentText()
+        if path:
+            self.add_favorite_requested.emit(path)
 
 class FileDropZone(QWidget):
     """
@@ -76,8 +112,8 @@ class SearchGroup(QWidget):
     [KR] 검색 옵션 및 입력 위젯 그룹.
     행/열 선택, 대소문자 구분, 검색어 입력 기능을 제공합니다.
     """
-    # keyword, by_column, case_sensitive, use_regex
-    search_requested = Signal(str, bool, bool, bool)
+    # keyword, by_column, case_sensitive, use_regex, target_columns
+    search_requested = Signal(str, bool, bool, bool, list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -101,6 +137,13 @@ class SearchGroup(QWidget):
         opt_layout.addWidget(self.chk_case)
         opt_layout.addWidget(self.chk_regex)
 
+        # [KR] 컬럼 타겟팅 입력
+        target_layout = QHBoxLayout()
+        target_layout.addWidget(QLabel("Target Columns (Optional):"))
+        self.input_target = QLineEdit()
+        self.input_target.setPlaceholderText("e.g. Email, Phone, ID (comma separated)")
+        target_layout.addWidget(self.input_target)
+
         # [KR] 검색어 입력 (History ComboBox) 및 버튼
         input_layout = QHBoxLayout()
         self.input_keyword = QComboBox()
@@ -115,6 +158,7 @@ class SearchGroup(QWidget):
         input_layout.addWidget(self.btn_search)
 
         layout.addWidget(self.grp_options)
+        layout.addLayout(target_layout)
         layout.addLayout(input_layout)
 
     def emit_search(self):
@@ -128,7 +172,12 @@ class SearchGroup(QWidget):
         by_column = self.radio_col.isChecked()
         case_sensitive = self.chk_case.isChecked()
         use_regex = self.chk_regex.isChecked()
-        self.search_requested.emit(keyword, by_column, case_sensitive, use_regex)
+
+        # [KR] 타겟 컬럼 파싱
+        target_cols_str = self.input_target.text().strip()
+        target_columns = [c.strip() for c in target_cols_str.split(',')] if target_cols_str else None
+
+        self.search_requested.emit(keyword, by_column, case_sensitive, use_regex, target_columns)
 
     def add_to_history(self, keyword):
         """
@@ -184,6 +233,36 @@ class DetailDialog(QDialog):
         btn_close.clicked.connect(self.close)
         layout.addWidget(btn_close)
 
+class HTMLDelegate(QStyledItemDelegate):
+    """
+    [KR] HTML 태그를 렌더링하기 위한 델리게이트.
+    검색어 하이라이팅을 위해 사용합니다.
+    """
+    def paint(self, painter, option, index):
+        options = option
+        self.initStyleOption(options, index)
+
+        style = options.widget.style() if options.widget else None
+        doc = QTextDocument()
+        doc.setHtml(options.text)
+
+        options.text = ""
+        style.drawControl(style.CE_ItemViewItem, options, painter, options.widget)
+
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+        # [KR] 선택된 항목의 텍스트 색상 조정
+        if options.state & style.State_Selected:
+            ctx.palette.setColor(QPalette.Text, options.palette.color(QPalette.HighlightedText))
+        else:
+            ctx.palette.setColor(QPalette.Text, options.palette.color(QPalette.Text))
+
+        painter.save()
+        painter.translate(options.rect.topLeft())
+        # 수직 중앙 정렬
+        painter.translate(0, (options.rect.height() - doc.size().height()) / 2)
+        doc.documentLayout().draw(painter, ctx)
+        painter.restore()
+
 class ResultTable(QWidget):
     """
     [KR] 검색 결과 표시 위젯.
@@ -194,22 +273,55 @@ class ResultTable(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # [KR] 결과 내 필터링 (Result Filter)
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Filter in Results:"))
+        self.input_filter = QLineEdit()
+        self.input_filter.setPlaceholderText("Type to filter visible results...")
+        self.input_filter.textChanged.connect(self.filter_results)
+        filter_layout.addWidget(self.input_filter)
+
         self.lbl_title = QLabel("Results Index: 0 found")
+
         self.table_results = QTableWidget()
         self.table_results.setColumnCount(4)
         self.table_results.setHorizontalHeaderLabels(["[X]", "Source", "Sheet", "Preview (Row Data)"])
-        self.table_results.setColumnWidth(0, 30) # 체크박스 컬럼 너비
+        self.table_results.setColumnWidth(0, 30)
         self.table_results.setColumnWidth(1, 150)
         self.table_results.setColumnWidth(2, 100)
         self.table_results.horizontalHeader().setStretchLastSection(True)
+
+        # [KR] HTML 델리게이트 적용 (Preview 컬럼)
+        self.table_results.setItemDelegateForColumn(3, HTMLDelegate(self.table_results))
 
         # [KR] 더블 클릭 및 컨텍스트 메뉴 설정
         self.table_results.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table_results.customContextMenuRequested.connect(self.on_context_menu)
         self.table_results.cellDoubleClicked.connect(self.on_double_click)
 
+        layout.addLayout(filter_layout)
         layout.addWidget(self.lbl_title)
         layout.addWidget(self.table_results)
+
+        self.current_keyword = "" # 하이라이팅용
+
+    def set_keyword(self, keyword):
+        self.current_keyword = keyword
+
+    def filter_results(self, text):
+        """
+        [KR] 결과 내 재검색 (간이 필터링).
+        복잡한 ProxyModel 대신, setRowHidden을 사용하여 간단히 구현.
+        """
+        for i in range(self.table_results.rowCount()):
+            visible = False
+            # 모든 컬럼 텍스트 검사
+            for j in range(1, 4):
+                item = self.table_results.item(i, j)
+                if item and text.lower() in item.text().lower():
+                    visible = True
+                    break
+            self.table_results.setRowHidden(i, not visible)
 
     def add_result_row(self, file_name, sheet_name, preview_text, full_path, raw_data):
         row_idx = self.table_results.rowCount()
@@ -228,13 +340,23 @@ class ResultTable(QWidget):
 
         self.table_results.setItem(row_idx, 1, QTableWidgetItem(file_name))
         self.table_results.setItem(row_idx, 2, QTableWidgetItem(sheet_name))
-        self.table_results.setItem(row_idx, 3, QTableWidgetItem(preview_text))
+
+        # [KR] 하이라이팅 적용
+        display_text = preview_text
+        if self.current_keyword:
+             # 단순 치환으로 하이라이팅 (HTML)
+             # 정규식 특수문자 이스케이프 필요할 수 있음. 여기선 단순 구현.
+             highlighted = f"<b><font color='red'>{self.current_keyword}</font></b>"
+             display_text = preview_text.replace(self.current_keyword, highlighted)
+
+        self.table_results.setItem(row_idx, 3, QTableWidgetItem(display_text))
 
         self.lbl_title.setText(f"Results Index: {self.table_results.rowCount()} found")
 
     def clear_results(self):
         self.table_results.setRowCount(0)
         self.lbl_title.setText("Results Index: 0 found")
+        self.input_filter.clear()
 
     def on_double_click(self, row, col):
         """
