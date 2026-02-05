@@ -21,8 +21,9 @@ pip install -r requirements.txt
 ```
 
 ## 3. 실행 방법
+프로젝트 루트 디렉토리에서 아래 명령어로 실행합니다.
 ```bash
-python src/main.py
+python -m src.main
 ```
 
 ## 4. 배포용 빌드 (Nuitka)
