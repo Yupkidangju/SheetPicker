@@ -177,8 +177,7 @@ class CopyAction(QWidget):
         self.lbl_selected = QLabel("[ Selected: 0 items ]")
         self.btn_copy = QPushButton("[ COPY TO CLIPBOARD ]")
         self.btn_copy.clicked.connect(self.copy_requested.emit)
-        self.btn_copy.setEnabled(False) # [KR] Phase 5 구현 전까지 비활성화
-        self.btn_copy.setToolTip("Coming in v0.2")
+        # self.btn_copy.setEnabled(False) # [KR] Phase 5 구현 완료
 
         layout.addWidget(self.lbl_selected)
         layout.addStretch()
