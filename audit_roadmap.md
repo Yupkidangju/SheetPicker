@@ -8,10 +8,10 @@
 ## 구현 마일스톤
 
 ### Phase 1: 초기화 및 기본 UI 구성 (Step 1)
-- [ ] **[Doc]** 프로젝트 문서 초기화 (README, CHANGELOG, etc.)
-- [ ] **[Env]** 가상환경 설정 및 `requirements.txt` 작성
-- [ ] **[UI]** PySide6 기반 메인 윈도우(Main Window) 스켈레톤 구현
-- [ ] **[UI]** 기본 레이아웃 및 위젯(FileDropZone, SearchGroup) 배치 확인
+- [x] **[Doc]** 프로젝트 문서 초기화 (README, CHANGELOG, etc.)
+- [x] **[Env]** 가상환경 설정 및 `requirements.txt` 작성
+- [x] **[UI]** PySide6 기반 메인 윈도우(Main Window) 스켈레톤 구현
+- [x] **[UI]** 기본 레이아웃 및 위젯(FileDropZone, SearchGroup) 배치 확인
 
 ### Phase 2: 스캐너 엔진 구현 (Step 2)
 - [ ] **[Core]** `src/core/scanner.py` 구현 (파일 순회)
