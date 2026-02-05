@@ -1,4 +1,4 @@
-# Data Scavenger Implementation Spec (v0.1 BETA)
+# Data Scavenger Implementation Spec (v1.0.0)
 
 ## 0. Global Documentation Rules (Git Policy)
 
@@ -8,8 +8,8 @@
 
 ## 1. Project Identity & Versioning
 
-* **Current Version:** v0.1 BETA
-* **Status:** Initial Specification & Implementation Entry
+* **Current Version:** v1.0.0
+* **Status:** Official Release (Stable)
 * **Target Environment:** Jules (Agent-first IDE)
 * **Target Platform:** Windows Desktop (10/11/12)
 
@@ -21,8 +21,6 @@
 * **Framework:** PySide6 (Qt 6.x) - Windows 고유의 위젯 스타일 및 다크 모드 지원
 * **Data Engine:** Pandas 3.0.0+ (최신 pyarrow 엔진 기반 고속 로딩)
 * **Libraries:** `openpyxl` (xlsx), `xlrd` (xls), `pyperclip` (클립보드 제어), `nuitka` (배포용 컴파일)
-
-
 
 ## 3. Project Architecture & UX Design
 
@@ -44,7 +42,6 @@ root/
 │   └── utils/
 │       └── clipboard_manager.py # 클립보드 포맷팅 및 복사 로직
 └── requirements.txt
-
 ```
 
 ### 3.2. UX/UI Flow & Interface Verification
@@ -66,7 +63,7 @@ root/
 
 ```json
 {
-  "project_version": "0.1 BETA",
+  "project_version": "1.0.0",
   "rules": [
     "대용량 엑셀 처리 시 GUI 프리징 방지를 위해 반드시 QThread 또는 Worker 패턴을 사용할 것",
     "파일 로딩 중 에러 발생 시(예: 파일 잠김) 무시하고 다음 파일로 진행하되 에러 로그를 UI 상단에 표시할 것",
@@ -75,7 +72,6 @@ root/
   ],
   "security_level": "strict"
 }
-
 ```
 
 ## 5. Prohibitions & Constraints

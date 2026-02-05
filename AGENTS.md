@@ -6,11 +6,11 @@ Template Version: 1.0
 
 Project Info:
 
-Name: ${PROJECT_NAME}
+Name: Data Scavenger
 
-Version: ${CURRENT_VERSION}
+Version: 1.0.0
 
-Environment: ${ENV_TYPE}
+Environment: Windows Desktop
 
 2. Permissions
 Filesystem Scope: project_root
