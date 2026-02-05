@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Generator, Dict, Any
 from openpyxl import load_workbook
+from src.utils.logger import logger
 
 class FileScanner:
     """
@@ -121,5 +122,6 @@ class FileScanner:
                     xls.close()
 
         except Exception as e:
-            # [KR] 읽기 실패 시
+            # [KR] 읽기 실패 시 로깅 후 예외 전파
+            logger.error(f"Failed to read file {file_path}: {e}")
             raise RuntimeError(f"Failed to read file {file_path}: {e}")
