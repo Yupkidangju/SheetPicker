@@ -27,7 +27,3 @@
 - Python 3.12 + PySide6 기반 모던 아키텍처.
 - Worker Thread 기반의 Non-freezing GUI.
 - `ConfigManager`를 통한 사용자 설정 지속성 보장.
-
-## [v1.2.1] - Security Hotfix
-### 보안 (Security)
-- **ReDoS 취약점 수정:** 정규식 엔진을 표준 `re`에서 `google-re2`로 교체하여 복잡한 정규식 입력 시 발생하는 DoS(서비스 거부) 취약점 해결.
