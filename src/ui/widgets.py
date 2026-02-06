@@ -337,16 +337,35 @@ class ResultTable(QWidget):
         """
         [KR] 결과 내 재검색 (간이 필터링).
         복잡한 ProxyModel 대신, setRowHidden을 사용하여 간단히 구현.
+        UI 업데이트를 일시 중지하여 성능을 최적화합니다.
         """
-        for i in range(self.table_results.rowCount()):
-            visible = False
-            # 모든 컬럼 텍스트 검사
-            for j in range(1, 4):
-                item = self.table_results.item(i, j)
-                if item and text.lower() in item.text().lower():
+        self.table_results.setUpdatesEnabled(False) # 렌더링 일시 중지
+
+        search_text = text.lower()
+        rows = self.table_results.rowCount()
+
+        try:
+            for i in range(rows):
+                visible = False
+                # [KR] 최적화: Preview 컬럼(3번)이 가장 중요하므로 먼저 검사
+                # 또는 모든 텍스트를 한 번에 검사
+
+                # Check Preview (Col 3)
+                item_preview = self.table_results.item(i, 3)
+                if item_preview and search_text in item_preview.text().lower():
                     visible = True
-                    break
-            self.table_results.setRowHidden(i, not visible)
+
+                # Check Source (Col 1)
+                elif self.table_results.item(i, 1) and search_text in self.table_results.item(i, 1).text().lower():
+                    visible = True
+
+                # Check Sheet (Col 2)
+                elif self.table_results.item(i, 2) and search_text in self.table_results.item(i, 2).text().lower():
+                    visible = True
+
+                self.table_results.setRowHidden(i, not visible)
+        finally:
+            self.table_results.setUpdatesEnabled(True) # 렌더링 재개
 
     def add_result_row(self, file_name, sheet_name, preview_text, full_path, raw_data):
         row_idx = self.table_results.rowCount()

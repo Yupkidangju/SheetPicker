@@ -54,12 +54,29 @@ class DataSearcher:
                  search_scope_df = str_df[valid_cols]
 
         # 2. 행(Axis 1) 단위로 하나라도 키워드를 포함하는지 검사
-        # case_sensitive 옵션 적용
-        # regex=use_regex 옵션 적용. use_regex가 False이면 regex=False가 되어 literal 매칭.
+        # [KR] 메모리 최적화: apply() 대신 컬럼 순회 루프 사용
+        # apply()는 전체 boolean DataFrame을 생성하므로 메모리를 많이 사용함.
+        # 컬럼별로 처리하여 마스크를 누적하면 메모리 사용량을 줄일 수 있음.
         try:
-            mask = search_scope_df.apply(
-                lambda x: x.str.contains(keyword, case=case_sensitive, regex=use_regex, na=False)
-            ).any(axis=1)
+            mask = None
+            for col in search_scope_df.columns:
+                # 각 컬럼에 대해 검색 수행
+                col_mask = search_scope_df[col].str.contains(
+                    keyword,
+                    case=case_sensitive,
+                    regex=use_regex,
+                    na=False
+                )
+
+                if mask is None:
+                    mask = col_mask
+                else:
+                    mask |= col_mask # Bitwise OR 누적
+
+            # 검색 대상 컬럼이 없는 경우
+            if mask is None:
+                return pd.DataFrame()
+
         except Exception:
             # [KR] 정규식 오류 등이 발생하면 빈 결과를 반환하여 크래시 방지
             return pd.DataFrame()

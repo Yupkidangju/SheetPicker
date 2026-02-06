@@ -28,6 +28,14 @@
 - Worker Thread 기반의 Non-freezing GUI.
 - `ConfigManager`를 통한 사용자 설정 지속성 보장.
 
+## [v1.1.0] - 2024-05-21 (Performance & Stability)
+### 성능 개선 (Performance)
+- **검색 엔진 최적화:** 메모리 사용량을 줄이기 위해 `search_dataframe`의 연산 방식을 컬럼 기반 순차 처리로 변경.
+- **UI 반응성 향상:** 결과 필터링 시 화면 렌더링을 일시 중지하여 대량 데이터 처리 속도 개선.
+
+### 안정성 (Stability)
+- **테스트 커버리지:** 주요 검색 로직 및 UI 필터링 로직에 대한 검증 완료.
+
 ## [v1.0.1] - 2024-05-21 (Hotfix & i18n)
 ### 수정됨 (Fixed)
 - **크리티컬 버그 수정:** 검색 결과 표시 중 `AttributeError: QCommonStyle` 발생 문제 해결 (PySide6 호환성).
