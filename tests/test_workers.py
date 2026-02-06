@@ -32,7 +32,8 @@ class TestSearchWorker(unittest.TestCase):
         # 검색 결과로 1개의 행이 있는 데이터프레임 반환
         mock_result_df = MagicMock()
         mock_result_df.empty = False
-        mock_result_df.iterrows.return_value = iter([(0, MagicMock())]) # 1 row
+        mock_result_df.columns = ["col1"]
+        mock_result_df.itertuples.return_value = iter([("val1",)]) # 1 row
         mock_searcher.search_dataframe.return_value = mock_result_df
         mock_searcher.format_result_row.return_value = "Preview Data"
 
