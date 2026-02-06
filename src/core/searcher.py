@@ -68,9 +68,10 @@ class DataSearcher:
         return target_df[mask]
 
     @staticmethod
-    def format_result_row(row: pd.Series) -> str:
+    def format_result_row(row: Any) -> str:
         """
         [KR] 검색 결과(행)를 UI 표시용 미리보기 문자열로 변환합니다.
         """
         # 앞 5개 컬럼만, 각 값은 20자로 제한하여 결합
-        return " | ".join([str(val)[:20] for val in row.values[:5]])
+        values = row.values if hasattr(row, 'values') else row
+        return " | ".join([str(val)[:20] for val in values[:5]])

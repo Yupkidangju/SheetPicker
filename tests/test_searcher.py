@@ -58,3 +58,17 @@ def test_search_by_column(sample_df):
     res = DataSearcher.search_dataframe(sample_df, "Alice", by_column=True)
     assert len(res) >= 1
     assert 'Name' in res.index
+
+def test_format_result_row(sample_df):
+    row_series = sample_df.iloc[0]
+    formatted = DataSearcher.format_result_row(row_series)
+    # Alice | alice.user@example.com | 123-456
+    # Truncated at 20 chars per val. alice... is 22 chars.
+    # alice.user@example.c
+    expected = "Alice | alice.user@example.c | 123-456"
+    assert formatted == expected
+
+    # Test tuple input
+    row_tuple = ('Alice', 'alice.user@example.com', '123-456')
+    formatted_tuple = DataSearcher.format_result_row(row_tuple)
+    assert formatted_tuple == expected
