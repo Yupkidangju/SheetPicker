@@ -1,3 +1,4 @@
+import os
 import pytest
 import pandas as pd
 from src.core.scanner import FileScanner
@@ -53,3 +54,32 @@ def test_read_xlsx_chunks(temp_files):
 
     df = chunks[0]['data']
     assert "Charlie" in df['Name'].values
+
+def test_scanner_extension_false_positive(tmp_path):
+    """
+    Ensures that files with extensions that merely end with a supported extension
+    (but are not exactly that extension) are NOT included.
+    Example: 'file.mycsv' should not be picked up if '.csv' is supported.
+    """
+    scanner = FileScanner()
+
+    # Setup
+    valid_file = tmp_path / "data.csv"
+    valid_file.touch()
+
+    invalid_file = tmp_path / "data.mycsv"
+    invalid_file.touch()
+
+    invalid_file2 = tmp_path / "data.csv.bak"
+    invalid_file2.touch()
+
+    # Run
+    found = scanner.get_supported_files([str(tmp_path)])
+
+    # Verify
+    found_bases = [os.path.basename(f) for f in found]
+
+    assert "data.csv" in found_bases
+    assert "data.mycsv" not in found_bases
+    assert "data.csv.bak" not in found_bases
+    assert len(found) == 1
