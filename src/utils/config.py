@@ -1,13 +1,20 @@
 import json
 import os
 from pathlib import Path
+import platformdirs
 
 class ConfigManager:
     """
     [KR] 애플리케이션 설정을 관리하는 클래스.
     JSON 파일로 설정을 저장하고 로드합니다.
+    설정 파일은 OS 표준 사용자 데이터 디렉토리에 저장됩니다.
     """
-    CONFIG_FILE = "config.json"
+    APP_NAME = "Data Scavenger"
+    APP_AUTHOR = "JulesCorp"
+
+    # [KR] 사용자 데이터 디렉토리 경로 결정
+    CONFIG_DIR = platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)
+    CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
     DEFAULT_CONFIG = {
         "theme": "light", # light or dark
@@ -32,9 +39,13 @@ class ConfigManager:
     @staticmethod
     def save_config(config):
         """
-        [KR] 설정을 저장합니다.
+        [KR] 설정을 저장합니다. 디렉토리가 없으면 생성합니다.
         """
         try:
+            # [KR] 디렉토리 존재 확인 및 생성
+            config_dir = os.path.dirname(ConfigManager.CONFIG_FILE)
+            os.makedirs(config_dir, exist_ok=True)
+
             with open(ConfigManager.CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4, ensure_ascii=False)
         except Exception as e:
