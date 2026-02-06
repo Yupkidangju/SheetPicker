@@ -1,4 +1,5 @@
 import pandas as pd
+import re2
 from typing import Optional, List, Any
 
 class DataSearcher:
@@ -54,12 +55,29 @@ class DataSearcher:
                  search_scope_df = str_df[valid_cols]
 
         # 2. 행(Axis 1) 단위로 하나라도 키워드를 포함하는지 검사
-        # case_sensitive 옵션 적용
-        # regex=use_regex 옵션 적용. use_regex가 False이면 regex=False가 되어 literal 매칭.
         try:
-            mask = search_scope_df.apply(
-                lambda x: x.str.contains(keyword, case=case_sensitive, regex=use_regex, na=False)
-            ).any(axis=1)
+            if use_regex:
+                # [KR] 보안: ReDoS 방지를 위해 google-re2 사용
+                # 정규식 모드일 때는 pandas의 str.contains(regex=True) 대신 re2를 직접 적용
+                pattern_str = keyword
+                if not case_sensitive:
+                    pattern_str = "(?i)" + pattern_str
+
+                # re2 컴파일 (실패 시 예외 발생으로 catch 블록 이동)
+                pattern = re2.compile(pattern_str)
+
+                # [KR] 요소별로 re2 검색 수행 (pandas >= 2.1.0 DataFrame.map 사용)
+                # google-re2는 C++ 기반이라 매우 빠르지만, Python Loop 오버헤드는 존재함
+                # 그러나 ReDoS 방지를 위해 필수적임
+                mask = search_scope_df.map(
+                    lambda x: bool(pattern.search(x))
+                ).any(axis=1)
+            else:
+                # [KR] 리터럴 검색은 pandas 최적화 기능 사용 (속도 빠름)
+                # use_regex가 False이면 regex=False가 되어 literal 매칭.
+                mask = search_scope_df.apply(
+                    lambda x: x.str.contains(keyword, case=case_sensitive, regex=False, na=False)
+                ).any(axis=1)
         except Exception:
             # [KR] 정규식 오류 등이 발생하면 빈 결과를 반환하여 크래시 방지
             return pd.DataFrame()
