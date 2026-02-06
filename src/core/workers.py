@@ -63,7 +63,10 @@ class SearchWorker(QThread):
                         target_columns=self.target_columns
                     )
 
-                    # [KR] 결과가 있으면 UI로 전송
+                    # [KR] 결과 수집 (배치 처리를 위해 리스트에 담아두고 루프 종료 후 전송 가능)
+                    # 여기서는 UnboundLocalError 방지를 위해 명시적으로 초기화
+                    batch_results = []
+
                     if not results_df.empty:
                         for idx, row in results_df.iterrows():
                             # Preview 텍스트 생성
@@ -76,7 +79,11 @@ class SearchWorker(QThread):
                                 'preview': preview,
                                 'raw_data': row.to_dict()
                             }
-                            self.result_found.emit(result_data)
+                            batch_results.append(result_data)
+
+                    # [KR] 수집된 결과 전송
+                    for result in batch_results:
+                        self.result_found.emit(result)
 
             except Exception as e:
                 # [KR] 개별 파일 에러는 전체 프로세스를 중단하지 않고 로그만 남김
