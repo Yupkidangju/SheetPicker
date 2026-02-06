@@ -116,7 +116,8 @@ class FileScanner:
                 xls = pd.ExcelFile(file_path)
                 try:
                     for sheet_name in xls.sheet_names:
-                        df = pd.read_excel(file_path, sheet_name=sheet_name)
+                        # [KR] 파일 경로 대신 ExcelFile 객체를 사용하여 I/O 오버헤드 감소
+                        df = pd.read_excel(xls, sheet_name=sheet_name)
                         # DataFrame을 chunksize로 슬라이싱하여 yield
                         num_rows = len(df)
                         for i in range(0, num_rows, chunksize):
