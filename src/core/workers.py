@@ -65,8 +65,8 @@ class SearchWorker(QThread):
 
                     # [KR] 결과가 있으면 UI로 전송
                     if not results_df.empty:
-                        batch_results = []
-                        for idx, row in results_df.iterrows():
+                        columns = results_df.columns
+                        for row in results_df.itertuples(index=False, name=None):
                             # Preview 텍스트 생성
                             preview = DataSearcher.format_result_row(row)
 
@@ -75,7 +75,7 @@ class SearchWorker(QThread):
                                 'full_path': str(file_path),
                                 'sheet': sheet_name,
                                 'preview': preview,
-                                'raw_data': row.to_dict()
+                                'raw_data': dict(zip(columns, row))
                             }
                             batch_results.append(result_data)
 
