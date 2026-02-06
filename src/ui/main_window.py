@@ -9,6 +9,7 @@ from src.utils.config import ConfigManager
 from src.ui.styles import AppStyle
 from src.ui.toast import ToastMessage
 from src.utils.i18n import Translator
+from src.ui.manual import HelpDialog
 
 class MainWindow(QMainWindow):
     """
@@ -103,6 +104,16 @@ class MainWindow(QMainWindow):
             action = QAction(label, self)
             action.triggered.connect(lambda checked, c=code: self.change_language(c))
             lang_menu.addAction(action)
+
+        # Help
+        help_menu = menubar.addMenu("Help")
+        action_guide = QAction("User Guide", self)
+        action_guide.triggered.connect(self.show_guide)
+        help_menu.addAction(action_guide)
+
+    def show_guide(self):
+        dlg = HelpDialog(self)
+        dlg.exec()
 
     def change_language(self, lang_code):
         Translator.set_language(lang_code)

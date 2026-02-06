@@ -149,6 +149,8 @@ class SearchGroup(QWidget):
         input_layout = QHBoxLayout()
         self.input_keyword = QComboBox()
         self.input_keyword.setEditable(True)
+        # [KR] 스마트 검색 힌트 추가
+        self.input_keyword.setToolTip("Smart Search:\n Space=AND, |=OR, -keyword=NOT, \"phrase\"=Exact")
         self.input_keyword.setPlaceholderText(Translator.get("ph_keyword"))
         self.input_keyword.lineEdit().returnPressed.connect(self.emit_search) # 엔터 키 지원
 
@@ -385,13 +387,26 @@ class ResultTable(QWidget):
         self.table_results.setItem(row_idx, 1, QTableWidgetItem(file_name))
         self.table_results.setItem(row_idx, 2, QTableWidgetItem(sheet_name))
 
-        # [KR] 하이라이팅 적용
+        # [KR] 하이라이팅 적용 (Smart Search 지원)
         display_text = preview_text
         if self.current_keyword:
-             # 단순 치환으로 하이라이팅 (HTML)
-             # 정규식 특수문자 이스케이프 필요할 수 있음. 여기선 단순 구현.
-             highlighted = f"<b><font color='red'>{self.current_keyword}</font></b>"
-             display_text = preview_text.replace(self.current_keyword, highlighted)
+             # 스마트 검색일 경우 여러 키워드 하이라이팅
+             # 정규식이 아니고 공백/파이프가 있는 경우 분리
+             import shlex
+             keywords = []
+             if not any(c in self.current_keyword for c in ['|', '-']) and ' ' in self.current_keyword:
+                 try:
+                     keywords = shlex.split(self.current_keyword)
+                 except:
+                     keywords = self.current_keyword.split()
+             else:
+                 keywords = [self.current_keyword]
+
+             for kw in keywords:
+                 if not kw or kw.startswith('-'): continue # 제외어는 하이라이팅 안함
+                 highlighted = f"<b><font color='red'>{kw}</font></b>"
+                 # 대소문자 무시 치환은 복잡하므로 여기선 단순 치환 (v1.2.0 scope)
+                 display_text = display_text.replace(kw, highlighted)
 
         self.table_results.setItem(row_idx, 3, QTableWidgetItem(display_text))
 
