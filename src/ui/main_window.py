@@ -140,18 +140,12 @@ class MainWindow(QMainWindow):
     def on_files_dropped(self, files):
         self.lbl_status.setText(f"Added {len(files)} files/folders to scan list.")
 
-    @Slot(dict)
-    def on_result_found(self, result):
+    @Slot(list)
+    def on_result_found(self, results):
         """
-        [KR] 검색 결과 수신 시 테이블에 추가
+        [KR] 검색 결과 수신 시 테이블에 추가 (Batch 처리)
         """
-        self.result_table.add_result_row(
-            result['file'],
-            result['sheet'],
-            result['preview'],
-            result['full_path'],
-            result['raw_data']
-        )
+        self.result_table.add_result_rows(results)
 
     @Slot(str)
     def update_status(self, msg):
