@@ -12,7 +12,7 @@ class SearchWorker(QThread):
     """
 
     # [KR] Signals
-    result_found = Signal(dict)   # 검색 결과 발견 시 방출 ({'file': str, 'sheet': str, 'preview': str, 'data': Series})
+    result_found = Signal(list)   # 검색 결과 발견 시 방출 (List[dict])
     progress_updated = Signal(str) # 진행 상태 메시지
     error_occurred = Signal(str)   # 에러 발생 시 방출
     finished_task = Signal()       # 작업 완료 시 방출 (finished는 QThread 기본 시그널과 겹치므로 이름 변경)
@@ -77,7 +77,16 @@ class SearchWorker(QThread):
                                 'preview': preview,
                                 'raw_data': dict(zip(columns, row))
                             }
-                            self.result_found.emit(result_data)
+                            batch_results.append(result_data)
+
+                            # [KR] Batch Emission (100개 단위)
+                            if len(batch_results) >= 100:
+                                self.result_found.emit(batch_results)
+                                batch_results = []
+
+                        # [KR] 남은 결과 방출
+                        if batch_results:
+                            self.result_found.emit(batch_results)
 
             except Exception as e:
                 # [KR] 개별 파일 에러는 전체 프로세스를 중단하지 않고 로그만 남김

@@ -51,8 +51,10 @@ class TestSearchWorker(unittest.TestCase):
         # 3. 결과 시그널이 방출되었는지
         self.worker.result_found.emit.assert_called()
         args = self.worker.result_found.emit.call_args[0][0]
-        self.assertEqual(args['file'], 'dummy.csv')
-        self.assertEqual(args['preview'], 'Preview Data')
+        self.assertIsInstance(args, list)
+        self.assertTrue(len(args) > 0)
+        self.assertEqual(args[0]['file'], 'dummy.csv')
+        self.assertEqual(args[0]['preview'], 'Preview Data')
 
         # 4. 완료 시그널이 방출되었는지
         self.worker.finished_task.emit.assert_called_once()

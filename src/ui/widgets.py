@@ -323,6 +323,26 @@ class ResultTable(QWidget):
                     break
             self.table_results.setRowHidden(i, not visible)
 
+    def add_result_rows(self, results: list):
+        """
+        [KR] 대량의 결과를 한 번에 추가합니다 (Performance Optimization).
+        """
+        if not results:
+            return
+
+        self.table_results.setUpdatesEnabled(False) # UI 업데이트 일시 중지
+        try:
+            for res in results:
+                self.add_result_row(
+                    res['file'],
+                    res['sheet'],
+                    res['preview'],
+                    res['full_path'],
+                    res['raw_data']
+                )
+        finally:
+            self.table_results.setUpdatesEnabled(True) # UI 업데이트 재개
+
     def add_result_row(self, file_name, sheet_name, preview_text, full_path, raw_data):
         row_idx = self.table_results.rowCount()
         self.table_results.insertRow(row_idx)
