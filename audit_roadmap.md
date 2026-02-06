@@ -65,3 +65,9 @@
 - [x] **[CI/CD]** GitHub Actions를 통한 자동 빌드 및 테스트 워크플로우 구성
 - [x] **[Build]** Nuitka 최적화 옵션을 적용한 최종 실행 파일 빌드 (Script Ready)
 - [x] **[Doc]** 최종 사용자 매뉴얼 및 배포 가이드 작성
+
+### Phase 9: Hotfix & i18n (v1.0.1) (Step 9)
+- [x] **[Fix]** `AttributeError` in `QStyledItemDelegate` (`widgets.py`) 수정
+- [x] **[Feat]** 다국어 지원 (i18n) 모듈 구현 및 5개국어 적용
+- [x] **[UI]** 결과 테이블 '모두 선택' (Select All) 기능 추가
+- [x] **[Fix]** 클립보드/내보내기 기능 정상화 확인

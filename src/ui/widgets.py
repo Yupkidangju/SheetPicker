@@ -3,11 +3,12 @@ from PySide6.QtWidgets import (
     QTableWidget, QGroupBox, QHBoxLayout, QRadioButton,
     QLineEdit, QCheckBox, QAbstractItemView, QTableWidgetItem,
     QComboBox, QDialog, QHeaderView, QMenu, QToolButton,
-    QFormLayout, QStyledItemDelegate
+    QFormLayout, QStyledItemDelegate, QStyle
 )
 from PySide6.QtCore import Qt, Signal, QUrl, QSortFilterProxyModel, QRegularExpression
 from PySide6.QtGui import QDesktopServices, QAction, QTextDocument, QAbstractTextDocumentLayout, QPalette
 from src.core.scanner import FileScanner
+from src.utils.i18n import Translator
 
 class FavoritesPanel(QWidget):
     """
@@ -23,14 +24,14 @@ class FavoritesPanel(QWidget):
         self.setLayout(layout)
 
         self.combo_favorites = QComboBox()
-        self.combo_favorites.setPlaceholderText("Select Favorite Folder...")
+        self.combo_favorites.setPlaceholderText(Translator.get("ph_fav"))
         self.combo_favorites.setMinimumWidth(200)
 
-        self.btn_add_to_list = QPushButton("Add to Scan List")
+        self.btn_add_to_list = QPushButton(Translator.get("btn_add_fav"))
         self.btn_add_to_list.setToolTip("Add selected favorite to scan list")
         self.btn_add_to_list.clicked.connect(self.on_add_clicked)
 
-        layout.addWidget(QLabel("Favorites:"))
+        layout.addWidget(QLabel(Translator.get("lbl_favorites")))
         layout.addWidget(self.combo_favorites)
         layout.addWidget(self.btn_add_to_list)
         layout.addStretch()
@@ -60,7 +61,7 @@ class FileDropZone(QWidget):
         self.scanner = FileScanner()
 
         # [KR] UI 구성: 안내 레이블 및 파일 리스트
-        self.lbl_info = QLabel("[ Drop Files/Folders Here ]")
+        self.lbl_info = QLabel(Translator.get("drop_files"))
         self.lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_info.setStyleSheet("border: 2px dashed #aaa; padding: 10px; color: #555;")
 
@@ -69,8 +70,8 @@ class FileDropZone(QWidget):
 
         # [KR] 파일 삭제 버튼
         btn_layout = QHBoxLayout()
-        self.btn_clear = QPushButton("Clear All")
-        self.btn_remove = QPushButton("Remove Selected")
+        self.btn_clear = QPushButton(Translator.get("btn_clear"))
+        self.btn_remove = QPushButton(Translator.get("btn_remove"))
 
         self.btn_clear.clicked.connect(self.list_files.clear)
         self.btn_remove.clicked.connect(self.remove_selected_items)
@@ -121,16 +122,16 @@ class SearchGroup(QWidget):
         self.setLayout(layout)
 
         # [KR] 검색 옵션 그룹
-        self.grp_options = QGroupBox("Search Strategy")
+        self.grp_options = QGroupBox(Translator.get("grp_strategy"))
         opt_layout = QHBoxLayout()
         self.grp_options.setLayout(opt_layout)
 
-        self.radio_row = QRadioButton("Search by Row")
-        self.radio_col = QRadioButton("Search by Column")
+        self.radio_row = QRadioButton(Translator.get("opt_row"))
+        self.radio_col = QRadioButton(Translator.get("opt_col"))
         self.radio_col.setChecked(True) # [KR] 기본값: 열 검색
-        self.chk_case = QCheckBox("Case Sensitive")
+        self.chk_case = QCheckBox(Translator.get("opt_case"))
         self.chk_case.setChecked(True) # [KR] 기본값: 대소문자 구분
-        self.chk_regex = QCheckBox("Regex") # [KR] 정규식 옵션 추가
+        self.chk_regex = QCheckBox(Translator.get("opt_regex")) # [KR] 정규식 옵션 추가
 
         opt_layout.addWidget(self.radio_row)
         opt_layout.addWidget(self.radio_col)
@@ -139,19 +140,21 @@ class SearchGroup(QWidget):
 
         # [KR] 컬럼 타겟팅 입력
         target_layout = QHBoxLayout()
-        target_layout.addWidget(QLabel("Target Columns (Optional):"))
+        target_layout.addWidget(QLabel(Translator.get("lbl_target")))
         self.input_target = QLineEdit()
-        self.input_target.setPlaceholderText("e.g. Email, Phone, ID (comma separated)")
+        self.input_target.setPlaceholderText(Translator.get("ph_target"))
         target_layout.addWidget(self.input_target)
 
         # [KR] 검색어 입력 (History ComboBox) 및 버튼
         input_layout = QHBoxLayout()
         self.input_keyword = QComboBox()
         self.input_keyword.setEditable(True)
-        self.input_keyword.setPlaceholderText("Enter search keyword...")
+        # [KR] 스마트 검색 힌트 추가
+        self.input_keyword.setToolTip("Smart Search:\n Space=AND, |=OR, -keyword=NOT, \"phrase\"=Exact")
+        self.input_keyword.setPlaceholderText(Translator.get("ph_keyword"))
         self.input_keyword.lineEdit().returnPressed.connect(self.emit_search) # 엔터 키 지원
 
-        self.btn_search = QPushButton("[ SEARCH ]")
+        self.btn_search = QPushButton(Translator.get("btn_search"))
         self.btn_search.clicked.connect(self.emit_search)
 
         input_layout.addWidget(self.input_keyword, stretch=3)
@@ -205,7 +208,7 @@ class DetailDialog(QDialog):
     """
     def __init__(self, data: dict, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Detail View")
+        self.setWindowTitle(Translator.get("dlg_detail_title"))
         self.resize(600, 400)
 
         layout = QVBoxLayout()
@@ -218,7 +221,7 @@ class DetailDialog(QDialog):
         # 테이블 구성
         self.table = QTableWidget()
         self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["Column", "Value"])
+        self.table.setHorizontalHeaderLabels([Translator.get("col_sheet"), "Value"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         # 데이터 채우기
@@ -247,7 +250,8 @@ class HTMLDelegate(QStyledItemDelegate):
         doc.setHtml(options.text)
 
         options.text = ""
-        style.drawControl(style.CE_ItemViewItem, options, painter, options.widget)
+        # [Fix] CE_ItemViewItem -> QStyle.ControlElement.CE_ItemViewItem
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, options, painter, options.widget)
 
         ctx = QAbstractTextDocumentLayout.PaintContext()
         # [KR] 선택된 항목의 텍스트 색상 조정
@@ -275,17 +279,29 @@ class ResultTable(QWidget):
 
         # [KR] 결과 내 필터링 (Result Filter)
         filter_layout = QHBoxLayout()
-        filter_layout.addWidget(QLabel("Filter in Results:"))
+        self.lbl_filter = QLabel(Translator.get("lbl_filter"))
+        filter_layout.addWidget(self.lbl_filter)
         self.input_filter = QLineEdit()
-        self.input_filter.setPlaceholderText("Type to filter visible results...")
+        self.input_filter.setPlaceholderText(Translator.get("ph_filter"))
         self.input_filter.textChanged.connect(self.filter_results)
         filter_layout.addWidget(self.input_filter)
 
-        self.lbl_title = QLabel("Results Index: 0 found")
+        # [KR] 전체 선택 버튼 추가
+        self.btn_select_all = QPushButton(Translator.get("btn_select_all"))
+        self.btn_select_all.setCheckable(True)
+        self.btn_select_all.clicked.connect(self.toggle_select_all)
+        filter_layout.addWidget(self.btn_select_all)
+
+        self.lbl_title = QLabel(Translator.get("status_ready"))
 
         self.table_results = QTableWidget()
         self.table_results.setColumnCount(4)
-        self.table_results.setHorizontalHeaderLabels(["[X]", "Source", "Sheet", "Preview (Row Data)"])
+        self.table_results.setHorizontalHeaderLabels([
+            "[X]",
+            Translator.get("col_source"),
+            Translator.get("col_sheet"),
+            Translator.get("col_preview")
+        ])
         self.table_results.setColumnWidth(0, 30)
         self.table_results.setColumnWidth(1, 150)
         self.table_results.setColumnWidth(2, 100)
@@ -308,20 +324,50 @@ class ResultTable(QWidget):
     def set_keyword(self, keyword):
         self.current_keyword = keyword
 
+    def toggle_select_all(self, checked):
+        """
+        [KR] 모든 항목 체크/해제
+        """
+        state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+        for i in range(self.table_results.rowCount()):
+            if not self.table_results.isRowHidden(i):
+                item = self.table_results.item(i, 0)
+                if item:
+                    item.setCheckState(state)
+
     def filter_results(self, text):
         """
         [KR] 결과 내 재검색 (간이 필터링).
         복잡한 ProxyModel 대신, setRowHidden을 사용하여 간단히 구현.
+        UI 업데이트를 일시 중지하여 성능을 최적화합니다.
         """
-        for i in range(self.table_results.rowCount()):
-            visible = False
-            # 모든 컬럼 텍스트 검사
-            for j in range(1, 4):
-                item = self.table_results.item(i, j)
-                if item and text.lower() in item.text().lower():
+        self.table_results.setUpdatesEnabled(False) # 렌더링 일시 중지
+
+        search_text = text.lower()
+        rows = self.table_results.rowCount()
+
+        try:
+            for i in range(rows):
+                visible = False
+                # [KR] 최적화: Preview 컬럼(3번)이 가장 중요하므로 먼저 검사
+                # 또는 모든 텍스트를 한 번에 검사
+
+                # Check Preview (Col 3)
+                item_preview = self.table_results.item(i, 3)
+                if item_preview and search_text in item_preview.text().lower():
                     visible = True
-                    break
-            self.table_results.setRowHidden(i, not visible)
+
+                # Check Source (Col 1)
+                elif self.table_results.item(i, 1) and search_text in self.table_results.item(i, 1).text().lower():
+                    visible = True
+
+                # Check Sheet (Col 2)
+                elif self.table_results.item(i, 2) and search_text in self.table_results.item(i, 2).text().lower():
+                    visible = True
+
+                self.table_results.setRowHidden(i, not visible)
+        finally:
+            self.table_results.setUpdatesEnabled(True) # 렌더링 재개
 
     def add_result_row(self, file_name, sheet_name, preview_text, full_path, raw_data):
         row_idx = self.table_results.rowCount()
@@ -341,13 +387,26 @@ class ResultTable(QWidget):
         self.table_results.setItem(row_idx, 1, QTableWidgetItem(file_name))
         self.table_results.setItem(row_idx, 2, QTableWidgetItem(sheet_name))
 
-        # [KR] 하이라이팅 적용
+        # [KR] 하이라이팅 적용 (Smart Search 지원)
         display_text = preview_text
         if self.current_keyword:
-             # 단순 치환으로 하이라이팅 (HTML)
-             # 정규식 특수문자 이스케이프 필요할 수 있음. 여기선 단순 구현.
-             highlighted = f"<b><font color='red'>{self.current_keyword}</font></b>"
-             display_text = preview_text.replace(self.current_keyword, highlighted)
+             # 스마트 검색일 경우 여러 키워드 하이라이팅
+             # 정규식이 아니고 공백/파이프가 있는 경우 분리
+             import shlex
+             keywords = []
+             if not any(c in self.current_keyword for c in ['|', '-']) and ' ' in self.current_keyword:
+                 try:
+                     keywords = shlex.split(self.current_keyword)
+                 except:
+                     keywords = self.current_keyword.split()
+             else:
+                 keywords = [self.current_keyword]
+
+             for kw in keywords:
+                 if not kw or kw.startswith('-'): continue # 제외어는 하이라이팅 안함
+                 highlighted = f"<b><font color='red'>{kw}</font></b>"
+                 # 대소문자 무시 치환은 복잡하므로 여기선 단순 치환 (v1.2.0 scope)
+                 display_text = display_text.replace(kw, highlighted)
 
         self.table_results.setItem(row_idx, 3, QTableWidgetItem(display_text))
 
@@ -386,8 +445,8 @@ class ResultTable(QWidget):
         full_path = data['full_path']
 
         menu = QMenu(self)
-        action_open_file = QAction("Open File", self)
-        action_open_folder = QAction("Open File Location", self)
+        action_open_file = QAction(Translator.get("ctx_open_file"), self)
+        action_open_folder = QAction(Translator.get("ctx_open_folder"), self)
 
         action_open_file.triggered.connect(lambda: self.open_file(full_path))
         action_open_folder.triggered.connect(lambda: self.open_folder(full_path))
@@ -420,10 +479,10 @@ class CopyAction(QWidget):
 
         self.lbl_selected = QLabel("[ Selected: 0 items ]")
 
-        self.btn_export = QPushButton("[ EXPORT RESULTS ]")
+        self.btn_export = QPushButton(Translator.get("btn_export"))
         self.btn_export.clicked.connect(self.export_requested.emit)
 
-        self.btn_copy = QPushButton("[ COPY TO CLIPBOARD ]")
+        self.btn_copy = QPushButton(Translator.get("btn_copy"))
         self.btn_copy.clicked.connect(self.copy_requested.emit)
 
         layout.addWidget(self.lbl_selected)

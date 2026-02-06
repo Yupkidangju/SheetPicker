@@ -54,18 +54,91 @@ class DataSearcher:
                  search_scope_df = str_df[valid_cols]
 
         # 2. 행(Axis 1) 단위로 하나라도 키워드를 포함하는지 검사
-        # case_sensitive 옵션 적용
-        # regex=use_regex 옵션 적용. use_regex가 False이면 regex=False가 되어 literal 매칭.
+        # [KR] 메모리 최적화: apply() 대신 컬럼 순회 루프 사용
+
+        # [KR] v1.2.0 Smart Search Logic
+        # 정규식이 아니고, 키워드에 공백/파이프/마이너스가 있으면 스마트 검색 시도
+        is_smart = not use_regex and any(c in keyword for c in [' ', '|', '-'])
+
+        if is_smart:
+            return DataSearcher._smart_search(target_df, search_scope_df, keyword, case_sensitive)
+
+        # 기존 로직 (Literal or Regex)
         try:
-            mask = search_scope_df.apply(
-                lambda x: x.str.contains(keyword, case=case_sensitive, regex=use_regex, na=False)
-            ).any(axis=1)
+            mask = DataSearcher._get_mask(search_scope_df, keyword, case_sensitive, use_regex)
+            if mask is None:
+                return pd.DataFrame()
+            return target_df[mask]
         except Exception:
-            # [KR] 정규식 오류 등이 발생하면 빈 결과를 반환하여 크래시 방지
             return pd.DataFrame()
 
-        # [KR] 필터링된 결과 반환 (원본 DataFrame에서 행 선택)
-        return target_df[mask]
+    @staticmethod
+    def _get_mask(df, keyword, case, regex):
+        """
+        [KR] 단일 키워드에 대한 boolean 마스크를 생성합니다 (컬럼 순회 방식).
+        """
+        mask = None
+        for col in df.columns:
+            col_mask = df[col].str.contains(keyword, case=case, regex=regex, na=False)
+            if mask is None:
+                mask = col_mask
+            else:
+                mask |= col_mask
+        return mask
+
+    @staticmethod
+    def _smart_search(target_df, scope_df, query, case_sensitive):
+        """
+        [KR] 스마트 검색 로직.
+        AND(공백), OR(|), NOT(-) 조건을 순차적으로 적용합니다.
+        """
+        import shlex
+
+        try:
+            # 1. 쿼리 파싱 (따옴표 처리)
+            # shlex는 쉘 스타일 파싱을 제공하므로 "hello world"를 하나의 토큰으로 인식함.
+            tokens = shlex.split(query)
+        except:
+            # 파싱 실패 시 기본 공백 분리
+            tokens = query.split()
+
+        # [KR] 필터링 시작: 전체가 True인 마스크로 시작하지 않고,
+        # Pandas chaining을 위해 DataFrame을 단계적으로 줄여나가는 것이 빠름.
+        # 하지만 원본 인덱스를 유지해야 하므로 Boolean Indexing을 조합함.
+
+        # 초기 마스크: 전체 True
+        final_mask = pd.Series([True] * len(scope_df), index=scope_df.index)
+
+        for token in tokens:
+            if not token: continue
+
+            # OR 조건 처리 (A|B)
+            if '|' in token:
+                sub_tokens = token.split('|')
+                or_mask = None
+                for sub in sub_tokens:
+                    if not sub: continue
+                    m = DataSearcher._get_mask(scope_df, sub, case_sensitive, False)
+                    if m is not None:
+                        or_mask = m if or_mask is None else (or_mask | m)
+
+                if or_mask is not None:
+                    final_mask &= or_mask
+
+            # NOT 조건 처리 (-A)
+            elif token.startswith('-') and len(token) > 1:
+                keyword = token[1:]
+                m = DataSearcher._get_mask(scope_df, keyword, case_sensitive, False)
+                if m is not None:
+                    final_mask &= ~m # NOT
+
+            # AND 조건 처리 (A)
+            else:
+                m = DataSearcher._get_mask(scope_df, token, case_sensitive, False)
+                if m is not None:
+                    final_mask &= m
+
+        return target_df[final_mask]
 
     @staticmethod
     def format_result_row(row: pd.Series) -> str:

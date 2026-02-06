@@ -8,6 +8,8 @@ from src.utils.exporter import ResultExporter
 from src.utils.config import ConfigManager
 from src.ui.styles import AppStyle
 from src.ui.toast import ToastMessage
+from src.utils.i18n import Translator
+from src.ui.manual import HelpDialog
 
 class MainWindow(QMainWindow):
     """
@@ -20,9 +22,12 @@ class MainWindow(QMainWindow):
 
         # [KR] 초기 설정 로드
         self.config = ConfigManager.load_config()
+        # [KR] 언어 설정
+        lang = self.config.get("language", "kr")
+        Translator.set_language(lang)
 
         # [KR] 윈도우 기본 설정
-        self.setWindowTitle("Data Scavenger v1.0.0")
+        self.setWindowTitle(Translator.get("window_title"))
         self.resize(1000, 800)
 
         # [KR] 테마 적용
@@ -35,16 +40,11 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
 
-        # [KR] 메뉴바 설정 (테마 전환)
-        menubar = self.menuBar()
-        view_menu = menubar.addMenu("View")
-
-        action_toggle_theme = QAction("Toggle Dark/Light Mode", self)
-        action_toggle_theme.triggered.connect(self.toggle_theme)
-        view_menu.addAction(action_toggle_theme)
+        # [KR] 메뉴바 설정 (테마 전환, 언어 설정)
+        self.setup_menu()
 
         # [KR] 상단 상태 바
-        self.lbl_status = QLabel("[!] System Status: Ready to Scan")
+        self.lbl_status = QLabel(Translator.get("status_ready"))
         self.lbl_status.setStyleSheet("padding: 5px; border-radius: 4px; font-weight: bold;")
 
         # [KR] 주요 위젯 인스턴스화
@@ -79,6 +79,56 @@ class MainWindow(QMainWindow):
         # [KR] Worker 참조 변수
         self.worker = None
 
+    def setup_menu(self):
+        menubar = self.menuBar()
+        # Clear existing menus if re-initializing
+        menubar.clear()
+
+        view_menu = menubar.addMenu(Translator.get("menu_view"))
+
+        # Theme
+        action_toggle_theme = QAction(Translator.get("menu_theme"), self)
+        action_toggle_theme.triggered.connect(self.toggle_theme)
+        view_menu.addAction(action_toggle_theme)
+
+        # Language
+        lang_menu = view_menu.addMenu(Translator.get("menu_lang"))
+        langs = {
+            "한국어": "kr",
+            "English": "en",
+            "日本語": "jp",
+            "繁體中文": "cn_t",
+            "简体中文": "cn_s"
+        }
+        for label, code in langs.items():
+            action = QAction(label, self)
+            action.triggered.connect(lambda checked, c=code: self.change_language(c))
+            lang_menu.addAction(action)
+
+        # Help
+        help_menu = menubar.addMenu("Help")
+        action_guide = QAction("User Guide", self)
+        action_guide.triggered.connect(self.show_guide)
+        help_menu.addAction(action_guide)
+
+    def show_guide(self):
+        dlg = HelpDialog(self)
+        dlg.exec()
+
+    def change_language(self, lang_code):
+        Translator.set_language(lang_code)
+        ConfigManager.set("language", lang_code)
+
+        # [KR] 단순 재시작 안내 (동적 갱신은 복잡하므로)
+        # 또는 간단히 메인 윈도우 타이틀과 일부만 갱신.
+        # 여기서는 전체 리로드가 필요함을 알리는게 깔끔하지만,
+        # 사용자가 "한번에 합시다"라고 했으므로 최대한 동적 갱신 시도 없이
+        # 다음 실행부터 적용된다는 토스트를 띄우거나,
+        # 편의상 재시작을 권장합니다.
+
+        self.show_toast(f"Language changed to {lang_code}. Please restart app.")
+        self.setWindowTitle(Translator.get("window_title"))
+
     def toggle_theme(self):
         current_theme = self.config.get("theme", "light")
         new_theme = "dark" if current_theme == "light" else "light"
@@ -109,7 +159,7 @@ class MainWindow(QMainWindow):
         target_files = self.drop_zone.get_all_files()
 
         if not target_files:
-            self.show_toast("Please drop files to search first.")
+            self.show_toast(Translator.get("msg_no_files"))
             return
 
         # [KR] 히스토리 저장
@@ -123,7 +173,7 @@ class MainWindow(QMainWindow):
 
         self.result_table.clear_results()
         self.result_table.set_keyword(keyword) # 하이라이팅 설정
-        self.lbl_status.setText(f"Searching for '{keyword}'...")
+        self.lbl_status.setText(Translator.get("msg_searching").format(keyword=keyword))
         self.search_group.btn_search.setEnabled(False)
 
         # [KR] Worker 설정 및 시작
@@ -165,11 +215,11 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def on_search_finished(self):
-        self.lbl_status.setText("[Done] Search completed.")
+        self.lbl_status.setText(Translator.get("msg_done"))
         self.search_group.btn_search.setEnabled(True)
 
         if self.result_table.table_results.rowCount() == 0:
-            QMessageBox.information(self, "Search Result", "No matches found.")
+            QMessageBox.information(self, Translator.get("window_title"), Translator.get("msg_no_matches"))
 
     @Slot()
     def on_copy_requested(self):
@@ -191,7 +241,7 @@ class MainWindow(QMainWindow):
                 selected_rows.append(data)
 
         if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select items to copy.")
+            QMessageBox.warning(self, Translator.get("window_title"), Translator.get("err_no_selection"))
             return
 
         formatted_text = ClipboardManager.format_for_clipboard(selected_rows)
@@ -199,14 +249,14 @@ class MainWindow(QMainWindow):
         # [KR] 개인정보 경고 (Spec)
         reply = QMessageBox.question(
             self,
-            "Privacy Warning",
-            "Selected data may contain sensitive information.\nProceed to copy to system clipboard?",
+            Translator.get("warn_title"),
+            Translator.get("warn_privacy"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
         if reply == QMessageBox.StandardButton.Yes:
             if ClipboardManager.copy_to_clipboard(formatted_text):
-                self.lbl_status.setText(f"Copied {len(selected_rows)} items to clipboard.")
+                self.lbl_status.setText(Translator.get("msg_copied").format(count=len(selected_rows)))
             else:
                 QMessageBox.critical(self, "Error", "Failed to access clipboard.")
 
@@ -218,7 +268,7 @@ class MainWindow(QMainWindow):
         """
         table = self.result_table.table_results
         if table.rowCount() == 0:
-            QMessageBox.warning(self, "No Data", "There is no data to export.")
+            QMessageBox.warning(self, Translator.get("window_title"), Translator.get("err_no_data"))
             return
 
         # 1. 대상 데이터 수집
@@ -246,13 +296,13 @@ class MainWindow(QMainWindow):
                 target_data.append(row_data)
 
         if not target_data:
-             QMessageBox.warning(self, "No Data", "Failed to collect data for export.")
+             QMessageBox.warning(self, Translator.get("window_title"), Translator.get("err_no_data"))
              return
 
         # 2. 저장 경로 선택
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Results",
+            Translator.get("btn_export"),
             "search_results.xlsx",
             "Excel Files (*.xlsx);;CSV Files (*.csv)"
         )
@@ -263,8 +313,8 @@ class MainWindow(QMainWindow):
         # 3. 내보내기 실행
         try:
             ResultExporter.export(target_data, file_path)
-            self.lbl_status.setText(f"Exported {len(target_data)} items to {file_path}")
-            QMessageBox.information(self, "Export Success", f"Successfully exported {len(target_data)} items.")
+            self.lbl_status.setText(Translator.get("msg_exported").format(count=len(target_data), path=file_path))
+            QMessageBox.information(self, Translator.get("window_title"), Translator.get("msg_done"))
         except Exception as e:
             QMessageBox.critical(self, "Export Error", str(e))
 
