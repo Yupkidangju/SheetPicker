@@ -65,6 +65,7 @@ class SearchWorker(QThread):
 
                     # [KR] 결과가 있으면 UI로 전송
                     if not results_df.empty:
+                        batch_results = []
                         columns = results_df.columns
                         for row in results_df.itertuples(index=False, name=None):
                             # Preview 텍스트 생성
