@@ -34,6 +34,12 @@ class TestSearchWorker(unittest.TestCase):
         mock_result_df.empty = False
         mock_result_df.columns = ["col1"]
         mock_result_df.itertuples.return_value = iter([("val1",)]) # 1 row
+
+        # Mock iterrows for baseline test compatibility
+        mock_row = MagicMock()
+        mock_row.to_dict.return_value = {"col1": "val1"}
+        mock_result_df.iterrows.return_value = iter([(0, mock_row)])
+
         mock_searcher.search_dataframe.return_value = mock_result_df
         mock_searcher.format_result_row.return_value = "Preview Data"
 
