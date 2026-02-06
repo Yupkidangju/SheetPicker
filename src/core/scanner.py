@@ -25,20 +25,23 @@ class FileScanner:
             List[str]: 발견된 파일의 절대 경로 리스트
         """
         found_files = []
+
         for p in paths:
-            path_obj = Path(p)
-            if not path_obj.exists():
+            # os.path 사용으로 성능 최적화 (pathlib.Path 객체 생성 오버헤드 제거)
+            p_abs = os.path.abspath(p)
+            if not os.path.exists(p_abs):
                 continue
 
-            if path_obj.is_file():
-                if path_obj.suffix.lower() in self.SUPPORTED_EXTENSIONS:
-                    found_files.append(str(path_obj.resolve()))
-            elif path_obj.is_dir():
-                for root, _, files in os.walk(path_obj):
+            if os.path.isfile(p_abs):
+                ext = os.path.splitext(p_abs)[1].lower()
+                if ext in self.SUPPORTED_EXTENSIONS:
+                    found_files.append(p_abs)
+            elif os.path.isdir(p_abs):
+                for root, _, files in os.walk(p_abs):
                     for file in files:
-                        f_path = Path(root) / file
-                        if f_path.suffix.lower() in self.SUPPORTED_EXTENSIONS:
-                            found_files.append(str(f_path.resolve()))
+                        ext = os.path.splitext(file)[1].lower()
+                        if ext in self.SUPPORTED_EXTENSIONS:
+                            found_files.append(os.path.join(root, file))
 
         # [KR] 중복 제거 후 반환
         return list(set(found_files))
