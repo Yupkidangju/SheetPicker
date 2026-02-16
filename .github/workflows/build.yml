@@ -1,13 +1,59 @@
-name: Build and Test
+name: Build and Release
 
+# 태그 푸시 시 자동 빌드 + 릴리즈 생성
+# 사용법: git tag v2.0.0 && git push origin v2.0.0
 on:
   push:
-    branches: [ "main", "feature/*" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install nuitka
+
+    - name: Build with Nuitka
+      run: |
+        python -m nuitka --standalone --onefile --enable-plugin=pyside6 --include-package=pandas --include-package=openpyxl --windows-console-mode=disable --company-name=Antigravity --product-name="Data Scavenger" --file-version=${{ github.ref_name }} --product-version=${{ github.ref_name }} --file-description="고성능 Excel/CSV 검색 도구" --output-filename=DataScavenger.exe src/main.py
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "Data Scavenger ${{ github.ref_name }}"
+        body: |
+          ## Data Scavenger ${{ github.ref_name }}
+
+          ### 다운로드
+          아래 `DataScavenger.exe`를 다운로드하여 실행하세요.
+          Python 설치 없이 바로 사용 가능합니다.
+
+          ### 주요 기능
+          - 🔍 4계층 검색 엔진 (정확/퍼지/초성/BM25)
+          - ⚡ 인덱싱 기반 고속 검색 (<100ms)
+          - 📤 검색 결과 xlsx/csv 내보내기
+          - ⭐ 파일 세트 즐겨찾기
+          - 🎨 다크/라이트 모드
+        files: |
+          DataScavenger.exe
+        draft: false
+        prerelease: false
+
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -33,7 +79,3 @@ jobs:
         QT_QPA_PLATFORM: offscreen
       run: |
         pytest --tb=short -v
-
-    # [참고] Nuitka 빌드는 대상 플랫폼(Windows)에서 수행하는 것을 권장합니다.
-    # ubuntu-latest에서는 테스트만 수행합니다.
-    # Windows 릴리즈 빌드가 필요한 경우 windows-latest 러너를 추가하세요.
