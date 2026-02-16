@@ -1,276 +1,347 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFileDialog, QMenu
-from PySide6.QtCore import Slot, Qt
-from PySide6.QtGui import QAction, QIcon
-from src.ui.widgets import FileDropZone, SearchGroup, ResultTable, CopyAction, FavoritesPanel
-from src.core.workers import SearchWorker
+"""
+[v2.0.0] 메인 윈도우
+검색창, 파일 트리, 결과 패널을 조합하여 앱의 전체 레이아웃을 구성합니다.
+인덱싱/검색 워커 관리, 테마 전환, 설정 저장/로드를 담당합니다.
+"""
+
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QSplitter, QStatusBar, QLabel, QProgressBar,
+    QPushButton, QFileDialog, QApplication
+)
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QAction
+from pathlib import Path
+
+from src.ui.search_bar import SearchBar
+from src.ui.file_tree import FileTreePanel
+from src.ui.result_cards import ResultPanel
+from src.ui.styles import AppStyle, get_dark_stylesheet, get_light_stylesheet
+from src.ui.toast import ToastMessage
+from src.core.indexer import SearchIndex
+from src.core.scanner import FileScanner
+from src.core.workers import IndexWorker, SearchWorker
+from src.core.cache import IndexCache
+from src.utils.config import ConfigManager
 from src.utils.clipboard_manager import ClipboardManager
 from src.utils.exporter import ResultExporter
-from src.utils.config import ConfigManager
-from src.ui.styles import AppStyle
-from src.ui.toast import ToastMessage
+from src.utils.logger import logger
+
 
 class MainWindow(QMainWindow):
     """
-    [KR] 메인 윈도우 클래스.
-    전체 애플리케이션의 레이아웃을 구성하고 주요 위젯을 배치하며,
-    Worker 스레드와 UI 위젯 간의 상호작용을 관리합니다.
+    [v2.0.0] Data Scavenger 메인 윈도우.
+    좌측 파일 트리 + 우측 검색/결과 영역의 2-패널 레이아웃.
     """
+
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Data Scavenger v2.0")
+        self.setMinimumSize(QSize(1000, 650))
+        self.resize(1200, 750)
 
-        # [KR] 초기 설정 로드
-        self.config = ConfigManager.load_config()
+        # 코어 컴포넌트 초기화
+        self.search_index = SearchIndex()
+        self.cache = IndexCache()
+        self._is_dark = True
+        self._recent_keywords = []
+        self._index_worker = None
+        self._search_worker = None
 
-        # [KR] 윈도우 기본 설정
-        self.setWindowTitle("Data Scavenger v1.0.0")
-        self.resize(1000, 800)
+        # 설정 로드
+        self._load_config()
 
-        # [KR] 테마 적용
-        is_dark = self.config.get("theme") == "dark"
-        AppStyle.apply_theme(self, is_dark)
+        # UI 구성
+        self._setup_ui()
+        self._setup_statusbar()
+        self._connect_signals()
 
-        # [KR] 중앙 위젯 및 메인 레이아웃 설정
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout()
-        central_widget.setLayout(main_layout)
+        # 테마 적용
+        self._apply_theme()
 
-        # [KR] 메뉴바 설정 (테마 전환)
-        menubar = self.menuBar()
-        view_menu = menubar.addMenu("View")
+        logger.info("MainWindow 초기화 완료 (v2.0.0)")
 
-        action_toggle_theme = QAction("Toggle Dark/Light Mode", self)
-        action_toggle_theme.triggered.connect(self.toggle_theme)
-        view_menu.addAction(action_toggle_theme)
+    def _setup_ui(self):
+        """UI 레이아웃 구성"""
+        central = QWidget()
+        self.setCentralWidget(central)
 
-        # [KR] 상단 상태 바
-        self.lbl_status = QLabel("[!] System Status: Ready to Scan")
-        self.lbl_status.setStyleSheet("padding: 5px; border-radius: 4px; font-weight: bold;")
+        main_layout = QVBoxLayout(central)
+        main_layout.setContentsMargins(16, 12, 16, 8)
+        main_layout.setSpacing(12)
 
-        # [KR] 주요 위젯 인스턴스화
-        self.favorites_panel = FavoritesPanel()
-        self.drop_zone = FileDropZone()
-        self.search_group = SearchGroup()
-        self.result_table = ResultTable()
-        self.copy_action = CopyAction()
-        self.toast = ToastMessage(self)
+        # 상단: 제목 + 테마 토글
+        title_row = QHBoxLayout()
+        title_label = QLabel("Data Scavenger")
+        title_label.setObjectName("titleLabel")
+        title_row.addWidget(title_label)
+        title_row.addStretch()
 
-        # [KR] 위젯 배치
-        main_layout.addWidget(self.lbl_status)
-        main_layout.addWidget(self.favorites_panel)
-        main_layout.addWidget(self.drop_zone, stretch=2)
-        main_layout.addWidget(self.search_group)
-        main_layout.addWidget(self.result_table, stretch=3)
-        main_layout.addWidget(self.copy_action)
+        self.btn_theme = QPushButton("🌙")
+        self.btn_theme.setToolTip("테마 전환 (다크/라이트)")
+        self.btn_theme.setFixedSize(36, 36)
+        self.btn_theme.clicked.connect(self._toggle_theme)
+        title_row.addWidget(self.btn_theme)
 
-        # [KR] 시그널 연결
-        self.drop_zone.files_dropped.connect(self.on_files_dropped)
-        self.search_group.search_requested.connect(self.start_search)
-        self.copy_action.copy_requested.connect(self.on_copy_requested)
-        self.copy_action.export_requested.connect(self.on_export_requested)
-        self.favorites_panel.add_favorite_requested.connect(self.on_favorite_added)
+        main_layout.addLayout(title_row)
 
-        # [KR] 초기화 (설정값 적용)
-        self.favorites_panel.set_favorites(self.config.get("favorites", []))
-        hist = self.config.get("search_history", [])
-        if hist:
-            self.search_group.input_keyword.addItems(hist)
+        # 검색창
+        self.search_bar = SearchBar()
+        main_layout.addWidget(self.search_bar)
 
-        # [KR] Worker 참조 변수
-        self.worker = None
+        # 메인 영역: 좌측 파일 트리 | 우측 결과
+        self.splitter = QSplitter(Qt.Horizontal)
 
-    def toggle_theme(self):
-        current_theme = self.config.get("theme", "light")
-        new_theme = "dark" if current_theme == "light" else "light"
+        # 좌측 패널
+        self.file_tree = FileTreePanel()
+        self.file_tree.setMinimumWidth(220)
+        self.file_tree.setMaximumWidth(350)
+        self.splitter.addWidget(self.file_tree)
 
-        ConfigManager.set("theme", new_theme)
-        self.config["theme"] = new_theme
+        # 우측 패널
+        self.result_panel = ResultPanel()
+        self.splitter.addWidget(self.result_panel)
 
-        AppStyle.apply_theme(self, new_theme == "dark")
-        self.show_toast(f"Switched to {new_theme.capitalize()} Mode")
+        # 스플리터 비율 (좌:우 = 1:3)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 3)
 
-    def show_toast(self, message):
-        self.toast.show_message(message)
+        main_layout.addWidget(self.splitter, 1)
 
-    @Slot(str)
-    def on_favorite_added(self, path):
-        """
-        [KR] 즐겨찾기 패널에서 추가 요청 시
-        """
-        self.drop_zone.list_files.addItem(path)
-        self.show_toast(f"Added favorite path: {path}")
+    def _setup_statusbar(self):
+        """하단 상태바 구성"""
+        self.statusBar().setStyleSheet("padding: 4px 8px;")
+        self.status_label = QLabel("준비됨")
+        self.statusBar().addWidget(self.status_label, 1)
 
-    @Slot(str, bool, bool, bool, list)
-    def start_search(self, keyword, by_column, case_sensitive, use_regex, target_columns):
-        """
-        [KR] 검색 시작 처리.
-        SearchWorker를 생성하고 시작합니다.
-        """
-        target_files = self.drop_zone.get_all_files()
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumWidth(200)
+        self.progress_bar.setMaximumHeight(12)
+        self.progress_bar.setVisible(False)
+        self.statusBar().addPermanentWidget(self.progress_bar)
 
-        if not target_files:
-            self.show_toast("Please drop files to search first.")
+    def _connect_signals(self):
+        """시그널-슬롯 연결"""
+        # 검색
+        self.search_bar.search_requested.connect(self._on_search)
+
+        # 파일 트리
+        self.file_tree.files_changed.connect(self._on_files_changed)
+        self.file_tree.file_removed.connect(self._on_file_removed)
+
+        # 결과 패널
+        self.result_panel.copy_requested.connect(self._on_copy)
+        self.result_panel.export_requested.connect(self._on_export)
+
+        # 유사도 슬라이더 변경 시 재검색
+        self.result_panel.sim_slider.valueChanged.connect(self._on_similarity_changed)
+
+    # ─── 인덱싱 ───
+
+    def _on_files_changed(self, file_paths: list):
+        """파일 목록 변경 시 인덱싱 시작"""
+        if not file_paths:
+            self.search_index.clear()
+            self.search_bar.update_stats(0, 0)
+            self.status_label.setText("파일이 제거되었습니다")
             return
 
-        # [KR] 히스토리 저장
-        history = [self.search_group.input_keyword.itemText(i) for i in range(self.search_group.input_keyword.count())]
-        ConfigManager.set("search_history", history)
+        # 기존 인덱싱 중단
+        if self._index_worker and self._index_worker.isRunning():
+            self._index_worker.stop()
+            self._index_worker.wait()
 
-        # [KR] 기존 작업 중단 및 UI 초기화
-        if self.worker and self.worker.isRunning():
-            self.worker.stop()
-            self.worker.wait()
+        # 새 파일만 필터링 (이미 인덱싱된 파일 제외)
+        new_files = [
+            f for f in file_paths
+            if f not in self.search_index.indexed_files
+        ]
 
-        self.result_table.clear_results()
-        self.result_table.set_keyword(keyword) # 하이라이팅 설정
-        self.lbl_status.setText(f"Searching for '{keyword}'...")
-        self.search_group.btn_search.setEnabled(False)
+        if not new_files:
+            return
 
-        # [KR] Worker 설정 및 시작
-        self.worker = SearchWorker(target_files, keyword, by_column, case_sensitive, use_regex)
-        self.worker.target_columns = target_columns # 속성 주입
+        # 인덱싱 워커 시작
+        self._index_worker = IndexWorker(new_files, self.search_index, self.cache)
+        self._index_worker.progress_updated.connect(self._on_index_progress)
+        self._index_worker.indexing_complete.connect(self._on_index_complete)
+        self._index_worker.error_occurred.connect(self._on_index_error)
+        self.progress_bar.setVisible(True)
+        self._index_worker.start()
 
-        self.worker.result_found.connect(self.on_result_found)
-        self.worker.progress_updated.connect(self.update_status)
-        self.worker.error_occurred.connect(self.on_worker_error)
-        self.worker.finished_task.connect(self.on_search_finished)
-        self.worker.start()
-
-    @Slot(list)
-    def on_files_dropped(self, files):
-        self.lbl_status.setText(f"Added {len(files)} files/folders to scan list.")
-
-    @Slot(dict)
-    def on_result_found(self, result):
-        """
-        [KR] 검색 결과 수신 시 테이블에 추가
-        """
-        self.result_table.add_result_row(
-            result['file'],
-            result['sheet'],
-            result['preview'],
-            result['full_path'],
-            result['raw_data']
+    def _on_file_removed(self, file_path: str):
+        """개별 파일 제거 시 인덱스에서도 제거"""
+        self.search_index.remove_file(file_path)
+        self.search_bar.update_stats(
+            self.search_index.total_files,
+            self.search_index.total_rows
         )
 
-    @Slot(str)
-    def update_status(self, msg):
-        self.lbl_status.setText(f"[Busy] {msg}")
+    def _on_index_progress(self, msg: str, pct: int):
+        """인덱싱 진행 상태 업데이트"""
+        self.status_label.setText(msg)
+        self.progress_bar.setValue(pct)
 
-    @Slot(str)
-    def on_worker_error(self, err_msg):
-        # [KR] 에러 발생 시 상태창에 표시 (팝업은 너무 잦을 수 있으므로 지양)
-        self.lbl_status.setText(f"[Error] {err_msg}")
-        # 필요 시 로그 위젯 등에 추가 가능
-
-    @Slot()
-    def on_search_finished(self):
-        self.lbl_status.setText("[Done] Search completed.")
-        self.search_group.btn_search.setEnabled(True)
-
-        if self.result_table.table_results.rowCount() == 0:
-            QMessageBox.information(self, "Search Result", "No matches found.")
-
-    @Slot()
-    def on_copy_requested(self):
-        """
-        [KR] 선택된 항목을 클립보드로 복사합니다.
-        """
-        selected_rows = []
-        table = self.result_table.table_results
-
-        for row in range(table.rowCount()):
-            # 체크박스 확인 (0번 컬럼)
-            chk_item = table.item(row, 0)
-            if chk_item.checkState() == Qt.CheckState.Checked:
-                data = {
-                    'file': table.item(row, 1).text(),
-                    'sheet': table.item(row, 2).text(),
-                    'data': table.item(row, 3).text()
-                }
-                selected_rows.append(data)
-
-        if not selected_rows:
-            QMessageBox.warning(self, "No Selection", "Please select items to copy.")
-            return
-
-        formatted_text = ClipboardManager.format_for_clipboard(selected_rows)
-
-        # [KR] 개인정보 경고 (Spec)
-        reply = QMessageBox.question(
-            self,
-            "Privacy Warning",
-            "Selected data may contain sensitive information.\nProceed to copy to system clipboard?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+    def _on_index_complete(self, file_count: int, row_count: int):
+        """인덱싱 완료"""
+        self.progress_bar.setVisible(False)
+        self.search_bar.update_stats(file_count, row_count)
+        self.status_label.setText(
+            f"✅ 인덱싱 완료 — {file_count}개 파일, {row_count:,}개 행"
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
-            if ClipboardManager.copy_to_clipboard(formatted_text):
-                self.lbl_status.setText(f"Copied {len(selected_rows)} items to clipboard.")
-            else:
-                QMessageBox.critical(self, "Error", "Failed to access clipboard.")
+        # 파일 트리에 시트 정보 업데이트
+        for (file_path, sheet_name), headers in self.search_index.file_headers.items():
+            existing = self.file_tree._files.get(file_path, {})
+            sheets = existing.get('sheets', [])
+            if sheet_name not in sheets:
+                sheets.append(sheet_name)
+                self.file_tree.update_sheets(file_path, sheets)
 
-    @Slot()
-    def on_export_requested(self):
-        """
-        [KR] 검색 결과를 엑셀/CSV로 내보냅니다.
-        체크된 항목이 있으면 체크된 항목만, 없으면 전체 항목을 내보냅니다.
-        """
-        table = self.result_table.table_results
-        if table.rowCount() == 0:
-            QMessageBox.warning(self, "No Data", "There is no data to export.")
+        self.show_toast(f"인덱싱 완료: {file_count}개 파일, {row_count:,}개 행")
+
+    def _on_index_error(self, msg: str):
+        """인덱싱 에러"""
+        logger.error(msg)
+        self.show_toast(f"⚠️ {msg}")
+
+    # ─── 검색 ───
+
+    def _on_search(self, query_text: str):
+        """검색 실행"""
+        if self.search_index.total_cells == 0:
+            self.show_toast("먼저 파일을 추가하고 인덱싱을 완료해 주세요.")
             return
 
-        # 1. 대상 데이터 수집
-        target_data = []
-        has_checked = False
+        # 기존 검색 대기
+        if self._search_worker and self._search_worker.isRunning():
+            self._search_worker.wait()
 
-        # 체크된 항목 먼저 확인
-        for row in range(table.rowCount()):
-            if table.item(row, 0).checkState() == Qt.CheckState.Checked:
-                has_checked = True
-                break
+        min_sim = self.result_panel.get_similarity_threshold()
 
-        for row in range(table.rowCount()):
-            item = table.item(row, 0)
-            # 체크된 것이 있으면 체크된 것만, 없으면 전체
-            if has_checked and item.checkState() != Qt.CheckState.Checked:
-                continue
+        self._search_worker = SearchWorker(
+            query_text, self.search_index, min_sim
+        )
+        self._search_worker.results_ready.connect(self._on_results)
+        self._search_worker.search_error.connect(self._on_search_error)
+        self._search_worker.search_time.connect(self._on_search_time)
+        self.status_label.setText(f"검색 중: '{query_text}'...")
+        self._search_worker.start()
 
-            data_map = item.data(Qt.ItemDataRole.UserRole)
-            if data_map and 'raw_data' in data_map:
-                # 메타데이터 추가 (파일명, 시트명)
-                row_data = data_map['raw_data'].copy()
-                row_data['_File'] = table.item(row, 1).text()
-                row_data['_Sheet'] = table.item(row, 2).text()
-                target_data.append(row_data)
+        # 최근 검색어 추가
+        if query_text not in self._recent_keywords:
+            self._recent_keywords.insert(0, query_text)
+            self._recent_keywords = self._recent_keywords[:10]
+            self.search_bar.update_recent(self._recent_keywords)
+            ConfigManager.set("recent_keywords", self._recent_keywords)
 
-        if not target_data:
-             QMessageBox.warning(self, "No Data", "Failed to collect data for export.")
-             return
+    def _on_results(self, results):
+        """검색 결과 수신"""
+        self.result_panel.display_results(results)
 
-        # 2. 저장 경로 선택
+    def _on_search_error(self, msg: str):
+        """검색 에러"""
+        self.status_label.setText(f"검색 오류: {msg}")
+        self.show_toast(f"⚠️ 검색 오류: {msg}")
+
+    def _on_search_time(self, elapsed: float):
+        """검색 시간 표시"""
+        self.status_label.setText(
+            f"검색 완료 ({elapsed:.3f}초)"
+        )
+
+    def _on_similarity_changed(self, value: int):
+        """유사도 슬라이더 변경 시 재검색"""
+        current_text = self.search_bar.input.text().strip()
+        if current_text and self.search_index.total_cells > 0:
+            self._on_search(current_text)
+
+    # ─── 복사 & 내보내기 ───
+
+    def _on_copy(self, results):
+        """결과를 클립보드에 복사"""
+        rows_data = []
+        for r in results:
+            row_values = [r.row.cells.get(h, '') for h in r.row.headers]
+            rows_data.append(row_values)
+
+        if not rows_data:
+            return
+
+        # 헤더 포함
+        headers = results[0].row.headers
+        formatted = '\t'.join(headers) + '\n'
+        formatted += '\n'.join('\t'.join(row) for row in rows_data)
+
+        if ClipboardManager.copy_to_clipboard(formatted):
+            self.show_toast(f"📋 {len(results)}건을 클립보드에 복사했습니다")
+        else:
+            self.show_toast("⚠️ 클립보드 복사에 실패했습니다")
+
+    def _on_export(self, results):
+        """결과를 xlsx 파일로 내보내기"""
+        if not results:
+            return
+
         file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Results",
-            "search_results.xlsx",
-            "Excel Files (*.xlsx);;CSV Files (*.csv)"
+            self, "내보내기",
+            "검색결과.xlsx",
+            "Excel 파일 (*.xlsx);;CSV 파일 (*.csv)"
         )
 
         if not file_path:
             return
 
-        # 3. 내보내기 실행
         try:
-            ResultExporter.export(target_data, file_path)
-            self.lbl_status.setText(f"Exported {len(target_data)} items to {file_path}")
-            QMessageBox.information(self, "Export Success", f"Successfully exported {len(target_data)} items.")
+            ResultExporter.export_results(results, file_path)
+            self.show_toast(f"📤 {len(results)}건을 {Path(file_path).name}에 저장했습니다")
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", str(e))
+            logger.error(f"내보내기 실패: {e}", exc_info=True)
+            self.show_toast(f"⚠️ 내보내기 실패: {str(e)}")
+
+    # ─── 테마 ───
+
+    def _toggle_theme(self):
+        """다크/라이트 테마 전환"""
+        self._is_dark = not self._is_dark
+        self._apply_theme()
+        ConfigManager.set("is_dark_theme", self._is_dark)
+
+    def _apply_theme(self):
+        """현재 테마 적용"""
+        app = QApplication.instance()
+        if app:
+            AppStyle.apply_theme(app, self._is_dark)
+        self.btn_theme.setText("☀️" if self._is_dark else "🌙")
+
+    # ─── 설정 ───
+
+    def _load_config(self):
+        """설정 로드"""
+        self._is_dark = ConfigManager.get("is_dark_theme", True)
+        self._recent_keywords = ConfigManager.get("recent_keywords", [])
+
+    # ─── 유틸리티 ───
+
+    def show_toast(self, message: str, duration: int = 3000):
+        """토스트 메시지 표시"""
+        toast = ToastMessage(message, parent=self, duration=duration)
+        toast.show_toast()
 
     def closeEvent(self, event):
-        # [KR] 앱 종료 시 스레드 안전 종료
-        if self.worker and self.worker.isRunning():
-            self.worker.stop()
-            self.worker.wait()
-        super().closeEvent(event)
+        """앱 종료 시 정리"""
+        # 워커 종료
+        if self._index_worker and self._index_worker.isRunning():
+            self._index_worker.stop()
+            self._index_worker.wait()
+
+        # 캐시 연결 닫기
+        if self.cache:
+            self.cache.close()
+
+        # 설정 저장
+        ConfigManager.set("recent_keywords", self._recent_keywords)
+        ConfigManager.set("is_dark_theme", self._is_dark)
+        ConfigManager.save()
+
+        logger.info("앱 종료")
+        event.accept()

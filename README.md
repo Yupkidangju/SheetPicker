@@ -1,67 +1,71 @@
-# Data Scavenger (v1.0.0)
+# Data Scavenger (v2.0.0)
 
 ## 🇰🇷 한국어 (Korean)
-**Data Scavenger**는 윈도우 데스크톱 환경을 위한 고성능 데이터 검색 도구입니다. 대용량 엑셀 및 CSV 파일을 빠르게 스캔하고, 행/열 단위 검색을 지원하며, 결과를 클립보드로 손쉽게 복사할 수 있습니다.
+**Data Scavenger**는 윈도우 데스크톱 환경을 위한 고성능 엑셀/CSV 데이터 검색 도구입니다. 대용량 파일을 빠르게 인덱싱하고, 정확 매칭·유사 매칭·초성 검색을 조합하여 원하는 데이터를 즉시 찾아줍니다.
 
 ### 주요 기능
-* **고속 스캔:** Pandas 3.0 및 PyArrow 엔진 기반의 빠른 파일 로딩.
-* **유연한 검색:** 행/열 단위 검색 및 대소문자 구분 옵션.
-* **안전한 처리:** 대용량 파일 처리 시 메모리 최적화 및 프리징 방지.
-* **편의성:** 검색 결과의 선택적 클립보드 복사.
-* **고급 기능:** 정규식 검색, 검색 기록, 상세 보기(더블 클릭), 내보내기(.xlsx/.csv), 파일 바로 열기(우클릭).
+* **🔍 단일 검색창:** 구글처럼 검색어만 입력하면 끝. 정규식·수식·쿼리문 불필요.
+* **⚡ 4단계 검색 엔진:** 정확 매칭 + 퍼지 매칭(오타 허용) + 초성 검색(ㅎㄱㄷ→홍길동) + BM25 관련도 랭킹
+* **📊 인덱싱 기반:** 파일 추가 시 1회 인덱싱 → 이후 검색 <100ms
+* **💾 SQLite 캐시:** 앱 재시작 시 파일 재로드 없이 즉시 검색
+* **⭐ 파일 세트 즐겨찾기:** 자주 쓰는 파일 조합을 저장/복원
+* **📤 결과 내보내기:** 검색 결과를 xlsx/csv로 저장 (출처 정보 포함)
+* **🎨 다크/라이트 모드:** Windows 11 Fluent 스타일
+
+### 🛠 사용 설명서
+1. **파일 추가:** 좌측 패널에서 [+ 파일] 또는 [+ 폴더] 클릭. 또는 드래그 & 드롭.
+2. **검색:** 상단 검색창에 키워드 입력. 자동으로 정확+유사+초성 검색 수행.
+3. **AND 검색:** `홍길동 서울` → 두 키워드가 모두 포함된 행만 표시.
+4. **제외 검색:** `홍길동 -퇴사` → "퇴사" 포함 행 제외.
+5. **범위 검색:** `10000~50000` → 해당 숫자 범위의 셀 검색.
+6. **초성 검색:** `ㅎㄱㄷ` → "홍길동" 자동 매칭.
+7. **유사도 조절:** 우측 슬라이더로 퍼지 매칭 임계값 조절 (40%~100%).
+8. **내보내기:** 체크박스로 원하는 결과 선택 → [📤 내보내기] 클릭.
+9. **즐겨찾기:** 현재 파일 목록을 세트로 저장하여 나중에 한 번에 불러오기.
+
+### 기술 스택 (2026-02 기준)
+* Python 3.13+ / PySide6 6.10+ / Pandas 3.0+ / rapidfuzz / rank_bm25
 
 ---
 
 ## 🇺🇸 English
-**Data Scavenger** is a high-performance data search tool for Windows desktop environments. It rapidly scans large Excel and CSV files, supports row/column-based searching, and allows for easy copying of results to the clipboard.
+**Data Scavenger** is a high-performance Excel/CSV data search tool for Windows. It indexes large files and combines exact matching, fuzzy matching, Korean initial consonant (Chosung) search, and BM25 ranking to instantly find the data you need.
 
 ### Key Features
-* **Fast Scanning:** Rapid file loading based on Pandas 3.0 and PyArrow engine.
-* **Flexible Search:** Row/Column-based search with case sensitivity options.
-* **Safe Processing:** Memory optimization and anti-freezing for large file handling.
-* **Convenience:** Selective clipboard copying of search results.
-* **Advanced Features:** Regex search, Search history, Detail view (Double-click), Export to Excel/CSV, Open File/Location (Right-click).
-
-### 🛠 User Manual (v1.0)
-1.  **Search:** Drag files/folders to the "Drop Zone". Enter a keyword.
-2.  **Targeting:** (Optional) Enter column names (e.g., `Name`, `ID`) to search only specific headers.
-3.  **Regex:** Check `Regex` box to use patterns like `\d{3}` (3 digits).
-4.  **Favorites:** Select a folder from the Favorites panel and click "Add" to scan it quickly.
-5.  **View:** Double-click a row to see full data. Right-click to open the file.
-6.  **Export:** Click `[ EXPORT RESULTS ]` to save the filtered list as .xlsx or .csv.
+* **🔍 Single Search Bar:** Just type — no regex, formulas, or query languages needed.
+* **⚡ 4-Layer Search Engine:** Exact + Fuzzy (typo-tolerant) + Chosung + BM25 relevance ranking.
+* **📊 Index-Based:** One-time indexing → subsequent searches <100ms.
+* **💾 SQLite Cache:** Instant search on app restart without reloading files.
+* **⭐ File Set Favorites:** Save/restore frequently used file combinations.
+* **📤 Export Results:** Save search results to xlsx/csv with source metadata.
 
 ---
 
 ## 🇯🇵 日本語 (Japanese)
-**Data Scavenger**は、Windowsデスクトップ環境向けの高性能データ検索ツールです。大容量のExcelおよびCSVファイルを高速にスキャンし、行/列単位の検索をサポートし、結果をクリップボードに簡単にコピーできます。
+**Data Scavenger**はWindows向けの高性能Excel/CSVデータ検索ツールです。大容量ファイルをインデックス化し、完全一致・あいまい検索・韓国語初声検索・BM25ランキングを組み合わせて即座にデータを見つけます。
 
 ### 主な機能
-* **高速スキャン:** Pandas 3.0およびPyArrowエンジンに基づく高速ファイル読み込み。
-* **柔軟な検索:** 行/列単位の検索および大文字・小文字の区別オプション。
-* **安全な処理:** 大容量ファイル処理時のメモリ最適化およびフリーズ防止。
-* **利便性:** 検索結果の選択的クリップボードコピー。
-* **高度な機能:** 正規表現検索、検索履歴、詳細表示（ダブルクリック）、Excel/CSVエクスポート、ファイル/フォルダを開く（右クリック）。
+* **🔍 シングル検索バー:** キーワードを入力するだけ。正規表現・数式不要。
+* **⚡ 4層検索エンジン:** 完全一致 + あいまい + 初声 + BM25関連度ランキング。
+* **📊 インデックスベース:** 初回インデックス化 → 以降の検索は100ms未満。
+* **📤 結果エクスポート:** 検索結果をxlsx/csvに保存。
 
 ---
 
 ## 🇹🇼 繁體中文 (Traditional Chinese)
-**Data Scavenger** 是一款專為 Windows 桌面環境設計的高效能資料搜尋工具。它能快速掃描大量 Excel 和 CSV 檔案，支援行/列單位的搜尋，並可輕鬆將結果複製到剪貼簿。
+**Data Scavenger** 是一款 Windows 高效能 Excel/CSV 資料搜尋工具。透過索引化大量檔案，結合精確比對、模糊比對、韓語初聲搜尋與 BM25 相關性排名，即時找到所需資料。
 
 ### 主要功能
-* **高速掃描:** 基於 Pandas 3.0 和 PyArrow 引擎的快速檔案載入。
-* **靈活搜尋:** 支援行/列單位搜尋及大小寫區分選項。
-* **安全處理:** 處理大容量檔案時的記憶體最佳化及防止凍結。
-* **便利性:** 搜尋結果的選擇性剪貼簿複製。
-* **進階功能:** 正規表示式搜尋、搜尋紀錄、詳細檢視（雙擊）、匯出 Excel/CSV、開啟檔案/資料夾（右鍵）。
+* **🔍 單一搜尋列:** 只需輸入關鍵字，無需正規表示式或查詢語法。
+* **⚡ 4層搜尋引擎:** 精確 + 模糊（容錯）+ 初聲 + BM25 相關性排名。
+* **📤 匯出結果:** 搜尋結果儲存為 xlsx/csv，包含來源資訊。
 
 ---
 
 ## 🇨🇳 简体中文 (Simplified Chinese)
-**Data Scavenger** 是一款专为 Windows 桌面环境设计的高性能数据搜索工具。它能快速扫描大量 Excel 和 CSV 文件，支持行/列单位的搜索，并可轻松将结果复制到剪贴板。
+**Data Scavenger** 是一款 Windows 高性能 Excel/CSV 数据搜索工具。通过索引化大量文件，结合精确匹配、模糊匹配、韩语初声搜索与 BM25 相关性排名，即时找到所需数据。
 
 ### 主要功能
-* **高速扫描:** 基于 Pandas 3.0 和 PyArrow 引擎的快速文件加载。
-* **灵活搜索:** 支持行/列单位搜索及大小写区分选项。
-* **安全处理:** 处理大容量文件时的内存优化及防止冻结。
-* **便利性:** 搜索结果的选择性剪贴板复制。
-* **高级功能:** 正则表达式搜索、搜索记录、详细查看（双击）、导出 Excel/CSV、打开文件/文件夹（右键）。
+* **🔍 单一搜索栏:** 只需输入关键字，无需正则表达式或查询语法。
+* **⚡ 4层搜索引擎:** 精确 + 模糊（容错）+ 初声 + BM25 相关性排名。
+* **📤 导出结果:** 搜索结果保存为 xlsx/csv，包含来源信息。

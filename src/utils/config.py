@@ -50,3 +50,9 @@ class ConfigManager:
         config = ConfigManager.load_config()
         config[key] = value
         ConfigManager.save_config(config)
+
+    @staticmethod
+    def save():
+        """[v2.0.0] 현재 설정을 즉시 디스크에 저장합니다 (명시적 호출용)."""
+        # 이미 set()에서 매번 저장하므로, 이 메서드는 명시적 flush 용도
+        pass

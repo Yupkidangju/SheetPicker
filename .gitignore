@@ -41,4 +41,20 @@ Thumbs.db
 
 # Project Specific
 *.log
+*.db
+config.json
 temp_init/
+
+# ==========================================================
+# [D3D Protocol §7] Git Management Rules
+# Git에 포함되는 .md 파일: README.md, CHANGELOG.md, BUILD_GUIDE.md
+# 그 외 모든 .md 파일은 로컬 전용으로 관리합니다.
+# ==========================================================
+*.md
+!README.md
+!CHANGELOG.md
+!BUILD_GUIDE.md
+
+# Antigravity 아카이브 (로컬 전용)
+.antigravity/
+.antigravityrules

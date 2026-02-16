@@ -4,9 +4,11 @@ from PySide6.QtGui import QColor, QPalette
 
 class ToastMessage(QWidget):
     """
-    [KR] 하단에서 떠오르는 비동기 알림 메시지 (Toast).
+    [v2.0.0] 하단에서 떠오르는 비동기 알림 메시지 (Toast).
     """
-    def __init__(self, parent):
+    def __init__(self, message: str = "", parent=None, duration: int = 3000):
+        self._init_message = message
+        self._init_duration = duration
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.SubWindow)
         self.setAttribute(Qt.WA_TransparentForMouseEvents) # 클릭 통과
@@ -38,6 +40,17 @@ class ToastMessage(QWidget):
         self.timer.timeout.connect(self.fade_out)
 
         self.hide()
+
+        # 생성 시 메시지가 있으면 자동 표시
+        if self._init_message:
+            QTimer.singleShot(100, lambda: self.show_message(
+                self._init_message, self._init_duration
+            ))
+
+    def show_toast(self, duration=None):
+        """[v2.0.0] MainWindow에서 호출하는 래퍼 메서드"""
+        dur = duration or self._init_duration or 3000
+        self.show_message(self._init_message, dur)
 
     def show_message(self, message, duration=3000):
         self.lbl_msg.setText(message)
